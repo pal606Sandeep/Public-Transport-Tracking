@@ -1,0 +1,11 @@
+export const ROLES = {
+  SUPER_ADMIN: "SUPER_ADMIN",
+  ADMIN: "ADMIN",
+  TRANSPORT_MANAGER: "TRANSPORT_MANAGER",
+  DISPATCHER: "DISPATCHER",
+  DRIVER: "DRIVER",
+  CONDUCTOR: "CONDUCTOR",
+  PASSENGER: "PASSENGER",
+} as const;
+
+export type Role = (typeof ROLES)[keyof typeof ROLES];
