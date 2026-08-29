@@ -23,16 +23,16 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 
 | Phase | Tasks | Developed | Tested | Done |
 |-------|-------|-----------|--------|------|
-| 3 — Real-Time Engine | P2-01 … P2-28 | 0 / 28 | 0 / 28 | 0 / 28 |
+| 3 — Real-Time Engine | P2-01 … P2-28 | 1 / 28 | 0 / 28 | 0 / 28 |
 | 7 — Production (real-time) | P2-29 … P2-31 | 0 / 3 | 0 / 3 | 0 / 3 |
-| **Total** | **31** | **0 / 31** | **0 / 31** | **0 / 31** |
+| **Total** | **31** | **1 / 31** | **0 / 31** | **0 / 31** |
 
 ---
 
 # PHASE 3 — REAL-TIME ENGINE
 
 ### P2-01 — Tracking service/worker setup & foundations
-- [ ] 🔨 Developed
+- [x] 🔨 Developed
 - [ ] 🧪 Tested
 - [ ] ✅ Done
 
