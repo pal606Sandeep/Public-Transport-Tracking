@@ -3,7 +3,7 @@ dotenv.config();
 
 import http from "http";
 import app from "./app.js";
-import { connectDB } from "./config/db.js";
+import { connectDB, closeDB } from "./config/db.js";
 import redisClient from "./config/redis.js";
 import { initSocket } from "./config/socket.js";
 import { registerSocketHandlers } from "./sockets/index.js";
@@ -26,10 +26,12 @@ const startServer = async (): Promise<void> => {
 
     process.on("SIGINT", async () => {
       await redisClient.quit();
+      await closeDB();
       process.exit(0);
     });
     process.on("SIGTERM", async () => {
       await redisClient.quit();
+      await closeDB();
       process.exit(0);
     });
   } catch (error) {
