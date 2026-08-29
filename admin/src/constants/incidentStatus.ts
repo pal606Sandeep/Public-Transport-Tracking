@@ -1,0 +1,21 @@
+export const INCIDENT_STATUS = {
+  OPEN: "OPEN",
+  ACKNOWLEDGED: "ACKNOWLEDGED",
+  IN_PROGRESS: "IN_PROGRESS",
+  RESOLVED: "RESOLVED",
+  CLOSED: "CLOSED",
+} as const;
+
+export type IncidentStatus =
+  (typeof INCIDENT_STATUS)[keyof typeof INCIDENT_STATUS];
+
+export const INCIDENT_TYPE = {
+  ACCIDENT: "ACCIDENT",
+  BREAKDOWN: "BREAKDOWN",
+  PASSENGER_INCIDENT: "PASSENGER_INCIDENT",
+  TRAFFIC: "TRAFFIC",
+  ROUTE_ISSUE: "ROUTE_ISSUE",
+  OTHER: "OTHER",
+} as const;
+
+export type IncidentType = (typeof INCIDENT_TYPE)[keyof typeof INCIDENT_TYPE];
