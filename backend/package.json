@@ -5,15 +5,26 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/worker.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "start:worker": "node dist/worker.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@turf/distance": "^7.1.0",
+    "@turf/nearest-point-on-line": "^7.1.0",
+    "@turf/along": "^7.1.0",
+    "@turf/line-slice": "^7.1.0",
+    "@turf/length": "^7.1.0",
+    "@turf/bearing": "^7.1.0",
+    "@turf/buffer": "^7.1.0",
+    "@turf/point-to-line-distance": "^7.1.0",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.16.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
