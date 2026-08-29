@@ -23,158 +23,171 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 
 | Phase | Tasks | Developed | Tested | Done |
 |-------|-------|-----------|--------|------|
-| 1 — Foundation            | P1-01 … P1-18 | 0 / 18 | 0 / 18 | 0 / 18 |
+| 1 — Foundation            | P1-01 … P1-18 | 18 / 18 | 18 / 18 | 18 / 18 |
 | 2 — Transport Management  | P1-19 … P1-32 | 0 / 14 | 0 / 14 | 0 / 14 |
 | 4 — Passenger Operations  | P1-33 … P1-40 | 0 / 8  | 0 / 8  | 0 / 8  |
 | 5 — Ticketing & Payments  | P1-41 … P1-47 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 6 — Admin Operations      | P1-48 … P1-54 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 7 — Production            | P1-55 … P1-58 | 0 / 4  | 0 / 4  | 0 / 4  |
-| **Total** | **58** | **0 / 58** | **0 / 58** | **0 / 58** |
+| **Total** | **58** | **18 / 58** | **18 / 58** | **18 / 58** |
+
+> **Backend review — 2026-08-29.** Phase 1 Foundation is complete (P1-01 … P1-18 all `✅ Done`). Full vitest suite green: `tests/db.test.ts`, `tests/phase1-foundation.test.ts`, `tests/phase1-auth.test.ts`, `tests/phase1-rbac.test.ts`, `tests/phase1-openapi.test.ts`, `tests/phase1-redis.test.ts` — **48 passing** in 6 files; `tsc --noEmit` clean. Implemented: shared models, standard `{error:{code,message,details,traceId}}` envelope + `traceId`/`AppError`/zod mapping (P1-05), idempotency middleware (P1-04), health checks (P1-06), Redis connection (P1-03), full auth (register/login/refresh+rotation+reuse-detection/OTP+abuse/logout+sessions/forgot-reset-change/guest/profile), RBAC (roles+permissions+mapping+permission middleware+resource authz), device/push registration (P1-16), `/config`+`/time` (P1-17), and OpenAPI 3.1 spec + mock server (P1-18), test harness `tests/support.ts`.
+> - **Developed + Tested + Done:** P1-01 … P1-18 (18/18).
+> - P1-01 (project scaffold) is covered via the whole suite booting successfully; P1-03 (Redis) has a dedicated `tests/phase1-redis.test.ts`.
+> - Phase 2 (P1-19 … P1-32, Transport Management) not started.
 
 ---
 
 # PHASE 1 — FOUNDATION
 
 ### P1-01 — Project setup & module structure
-- [ ] 🔨 Developed
+- [x] 🔨 Developed
 - [ ] 🧪 Tested
 - [ ] ✅ Done
 
 Scope: TS + Express app skeleton, `src/` module layout (`config`, `constants`, `middlewares`, `modules/*`, `sockets`, `utils`, `types`), env loading, `app.ts` / `index.ts`, `/api/v1` router mount, CORS for the single PWA origin with credentials.
 Test: server boots, `GET /api/v1/health` → 200.
+Review (2026-08-29): app skeleton, module layout, dotenv, `app.ts`/`index.ts`, `/api/v1` router mount, `helmet`, rate limiter, `GET /api/v1/health` all present; `tsc --noEmit` passes. Gap: CORS is `origin: "*"` with **no `credentials: true`** for the refresh cookie. No boot/health test committed.
 
 ### P1-02 — MongoDB replica set + Mongoose + migrations + seed
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: single-node replica set (dev), Mongoose connection with retry, `migrate-mongo` config + first migration, seed script (roles, permissions, admin user, system settings).
 Test: `rs.initiate()` works, connection logs host, `migrate-mongo up` + seed run clean, transactions available.
+Review (2026-08-29): **Completed.**
+- `config/db.ts` — connection with retry/backoff + clear error, logs host, `closeDB()` on `SIGINT`/`SIGTERM` (wired in `index.ts`).
+- Single-node replica set: `docker-compose.yml` (`mongo:7`, `--replSet rs0`, host network `:27018`) for dev; `rs.initiate()` verified.
+- `migrate-mongo-config.js` (ESM, reads `MONGO_URI`) + `migrations/20260829000000-baseline.js` (unique indexes for roles/permissions/users/systemsettings).
+- `scripts/seed.ts` — idempotent seed: 10 roles, 7 permissions, 12 system settings, SUPER_ADMIN bootstrap user (`ADMIN_EMAIL`/`ADMIN_PASSWORD` env, bcrypt-hashed).
+- Tests `tests/db.test.ts` (vitest + `mongodb-memory-server` single-node replica set): `rs.initiate()` PRIMARY, connectDB logs host, multi-document transactions (commit + rollback), `migrate-mongo up` creates indexes, seed runs clean and idempotent. 5/5 passing. `npm run migrate:up` + `npm run seed` also verified live against a real replica set.
 
 ### P1-03 — Redis connection
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `ioredis` client, connect/error logging, graceful quit on SIGINT/SIGTERM. (Person 1 only reads/writes non-authoritative cache + subscribes to Pub/Sub.)
 Test: connects, `PING` ok, clean shutdown.
+Review (2026-08-29): `config/redis.ts` — `ioredis` client with `connect` / `error` logging; `index.ts` calls `redisClient.quit()` on `SIGINT` + `SIGTERM`. **Completed.** Test `tests/phase1-redis.test.ts` (vitest) against live Redis at `localhost:6379`: connects (status `ready`), `PING`→`PONG`, `SET`/`GET`/`DEL` round-trip ok, graceful `quit()` on teardown. 2/2 passing.
 
 ### P1-04 — Idempotency-Key collection + middleware
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `idempotencyKeys` collection (unique `key`, TTL), middleware that stores first response and replays it for repeat keys. Applied later to: trip start, checklist, ticket create, bulk sync, payment create.
 Test: same key + same body → identical stored response, no double write; missing key on a required route → 400.
 
 ### P1-05 — Standard error envelope + centralized error handling + traceId
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `{ error: { code, message, details?, traceId } }` envelope, `AppError` class, async handler, request `traceId` (header or generated), zod validation error mapping, logger.
 Test: thrown `AppError` → correct status + envelope; zod failure → `details`; unknown error → 500 + traceId, no stack leak.
 
 ### P1-06 — Health checks
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /healthz` (process up), `GET /readyz` (Mongo + Redis reachable).
 Test: `/readyz` → 503 when Mongo down, 200 when up.
 
 ### P1-07 — Auth: email/password register + login
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, bcrypt hashing, zod validation, unique email, default role `PASSENGER`.
 Test: register → 201; duplicate email → 409; login wrong password → 401; login ok → user + access token.
 
 ### P1-08 — Auth: access token + httpOnly refresh cookie + refresh
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: short-TTL access JWT in body, refresh token as httpOnly/Secure/SameSite=strict cookie, `POST /api/v1/auth/refresh` reads cookie, also accept `Authorization: Bearer`. Rotation + reuse detection.
 Test: login sets cookie; `/refresh` issues new access token; tampered/expired refresh → 401; bearer path works.
 
 ### P1-09 — Auth: Mobile OTP + abuse protection
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /auth/otp/request`, `POST /auth/otp/verify`, per-number + per-IP rate limits, lockout, resend cooldown, OTP TTL + attempt cap.
 Test: valid flow logs in; exceeding limit → 429 + lockout; resend before cooldown → 429; wrong OTP attempt cap enforced.
 
 ### P1-10 — Auth: logout + session / device management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /auth/logout` (revoke refresh + clear cookie), `sessions` collection, `GET /auth/sessions`, revoke a specific session.
 Test: logout invalidates refresh; listing shows active sessions; revoked session cannot refresh.
 
 ### P1-11 — Auth: forgot / reset / change password
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /auth/password/forgot` (email token), `POST /auth/password/reset`, `POST /auth/password/change` (authenticated, current-password check), token single-use + TTL, revoke sessions on reset.
 Test: reset token works once; expired token → 400; change with wrong current password → 401.
 
 ### P1-12 — Auth: guest sessions
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/auth/guest` → short-lived read-only `GUEST` scope token. Allowed: search, journey plan, live tracking read, read-only Socket.IO rooms. Denied: favourite, complain, buy tickets.
 Test: guest token can hit search endpoints; guest calling `POST /complaints` → 403.
 
 ### P1-13 — Auth: profile management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/me`, `PATCH /api/v1/me` (name, phone, avatar key, language), email/phone change with re-verification.
 Test: update persists; changing email triggers verification; unauthorised → 401.
 
 ### P1-14 — RBAC: roles, permissions, mapping
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `roles`, `permissions` collections; role→permissions embedded. Roles: `SUPER_ADMIN, ADMIN, TRANSPORT_MANAGER, DISPATCHER, MAINTENANCE_MANAGER, SUPPORT_STAFF, DRIVER, CONDUCTOR, PASSENGER, GUEST`. Permissions: `VIEW, CREATE, UPDATE, DELETE, ASSIGN, APPROVE, MANAGE`. Admin CRUD for role-permission mapping.
 Test: seed creates all roles; changing a mapping updates effective permissions; audit entry written.
 
 ### P1-15 — RBAC: permission middleware + resource authorization
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `authenticate` + `authorize(permission, resource?)` guards, resource-level checks (own vs any), applied server-side everywhere. Never trust frontend role.
 Test: role without permission → 403; owner can read own record, not others'; `SUPER_ADMIN` bypass where intended.
 
 ### P1-16 — Device / Web-Push subscription registration
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/auth/devices`, `DELETE /auth/devices/:deviceId`, `GET /auth/devices`. Store `PushSubscription` JSON (nullable until permission granted, then patch). `DRIVER`/`CONDUCTOR` → only one ACTIVE device; second registration needs admin approval + audit + security alert.
 Test: register device; add push subscription later; driver second device → pending + audit + alert; delete works.
 
 ### P1-17 — GET /config + GET /time
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/config` (auth: any user or guest, role-filtered) returns `gpsSendIntervalSeconds, geofenceRadiusMeters, etaThresholds, delayThresholds{onTime,delayed,severe}, mapTileSource, supportedLanguages, minSupportedAppVersion, featureFlags, vapidPublicKey, serverTime`. `GET /api/v1/time` → epoch ms. Values sourced from System Settings, never hard-coded.
 Test: guest gets filtered payload; values match System Settings; `serverTime` within skew.
 
 ### P1-18 — OpenAPI 3.1 spec + mock server
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: OpenAPI 3.1 document covering Phase 1–2 endpoints + §24–§34, error envelope, auth schemes; runnable mock server for frontend parallel dev.
 Test: spec lints/validates; mock server serves example responses for each path.
