@@ -12,216 +12,118 @@ import {
   occupancyQueue,
   eventProcessingQueue,
   historicalDataQueue,
+  scheduleRepeatableJobs,
 } from "../queues/tracking.queues.js";
+import { validateGPSSchema, updateVehicleLocation, type GPSSchema } from "../tracking.service.js";
+import { detectGPSAnomaly } from "../anomaly/gps-anomaly.service.js";
+import { calculateETA } from "../geo/eta.service.js";
+import { processGeofence } from "../geo/geofence-processing.service.js";
+import { sweepOfflineVehicles } from "../geo/offline-detection.service.js";
+import { sweepIdleDrivers } from "../geo/driver-status.service.js";
+import { computeTripStatistics } from "../geo/trip-stats.service.js";
+import { processOccupancyUpdate } from "../geo/occupancy.service.js";
+import { persistGPSPointDirect, archiveOldGPSHistory, type GPSPoint } from "../geo/gps-history.service.js";
+import { getTrackingSettings } from "../settings/tracking-settings.service.js";
+import { republishEvent, type TrackingEventType } from "../event-bus.service.js";
 
 const connection = redisOptions;
-
-interface GPSProcessingJob {
-  vehicleId: string;
-  tripId: string;
-  latitude: number;
-  longitude: number;
-  speed: number;
-  heading: number;
-  accuracy: number;
-  timestamp: number;
-  driverId: string;
-}
-
-interface ETACalculationJob {
-  vehicleId: string;
-  tripId: string;
-  routeId: string;
-  currentLocation: { lat: number; lng: number };
-  speed: number;
-}
-
-interface GeofenceJob {
-  vehicleId: string;
-  tripId: string;
-  location: { lat: number; lng: number };
-  routeId: string;
-}
-
-interface OfflineDetectionJob {
-  vehicleId: string;
-  lastSeen: number;
-}
-
-interface TripStatsJob {
-  tripId: string;
-  vehicleId: string;
-  driverId: string;
-}
 
 interface OccupancyJob {
   vehicleId: string;
   tripId: string;
+  routeId: string;
   passengerCount: number;
   capacity: number;
 }
 
 interface EventProcessingJob {
-  eventType: string;
+  eventType: TrackingEventType;
   payload: Record<string, unknown>;
   traceId: string;
 }
 
-interface HistoricalDataJob {
-  tripId: string;
-  points: Array<{
-    lat: number;
-    lng: number;
-    speed: number;
-    heading: number;
-    timestamp: number;
-  }>;
-}
-
 const workers: Worker[] = [];
 
-function createGPSProcessingWorker(): Worker<GPSProcessingJob> {
-  const worker = new Worker<GPSProcessingJob>(
+function createGPSProcessingWorker(): Worker<GPSSchema> {
+  const worker = new Worker<GPSSchema>(
     "gps-processing",
     async (job) => {
-      const { vehicleId, tripId, latitude, longitude, speed, heading, accuracy, timestamp, driverId } = job.data;
-      logger.info(`[GPS Processing] Processing GPS for vehicle ${vehicleId}, trip ${tripId}`);
-      
-      // TODO: Implement GPS anomaly detection, validation, Redis update
-      // This will be implemented in P2-04, P2-05
-      
-      return { success: true, vehicleId, tripId };
+      const data = job.data;
+      const anomaly = detectGPSAnomaly(data.vehicleId, data.latitude, data.longitude, data.speed, data.timestamp, data.accuracy);
+      if (anomaly.isAnomaly) {
+        logger.warn(`[GPS Processing] Anomaly for vehicle ${data.vehicleId}: ${anomaly.reason}`);
+        return { success: false, vehicleId: data.vehicleId, reason: anomaly.reason };
+      }
+      await validateGPSSchema(data);
+      await updateVehicleLocation(data);
+      return { success: true, vehicleId: data.vehicleId, tripId: data.tripId };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: trackingConfig.queue.concurrency }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[GPS Processing] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[GPS Processing] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[GPS Processing] Job ${job.id} completed`));
+  worker.on("failed", (job, err) => logger.error(`[GPS Processing] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
-function createETACalculationWorker(): Worker<ETACalculationJob> {
-  const worker = new Worker<ETACalculationJob>(
+function createETACalculationWorker(): Worker<{ vehicleId: string; tripId: string; routeId: string; lat: number; lng: number; speed: number }> {
+  const worker = new Worker(
     "eta-calculation",
     async (job) => {
-      const { vehicleId, tripId, routeId, currentLocation, speed } = job.data;
-      logger.info(`[ETA Calculation] Calculating ETA for vehicle ${vehicleId}, trip ${tripId}`);
-      
-      // TODO: Implement ETA calculation using @turf
-      // This will be implemented in P2-12
-      
-      return { success: true, vehicleId, tripId };
+      const { vehicleId, tripId, routeId, lat, lng, speed } = job.data;
+      const eta = await calculateETA(vehicleId, tripId, routeId, lat, lng, speed);
+      return { success: true, vehicleId, tripId, eta };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: trackingConfig.queue.concurrency }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[ETA Calculation] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[ETA Calculation] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[ETA Calculation] Job ${job.id} completed`));
+  worker.on("failed", (job, err) => logger.error(`[ETA Calculation] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
-function createGeofenceWorker(): Worker<GeofenceJob> {
-  const worker = new Worker<GeofenceJob>(
+function createGeofenceWorker(): Worker<{ vehicleId: string; tripId: string; routeId: string; lat: number; lng: number }> {
+  const worker = new Worker(
     "geofence-processing",
     async (job) => {
-      const { vehicleId, tripId, location, routeId } = job.data;
-      logger.info(`[Geofence] Processing geofence for vehicle ${vehicleId}, trip ${tripId}`);
-      
-      // TODO: Implement geofencing logic using @turf
-      // This will be implemented in P2-10
-      
-      return { success: true, vehicleId, tripId };
+      const { vehicleId, tripId, routeId, lat, lng } = job.data;
+      const results = await processGeofence(vehicleId, tripId, routeId, lat, lng, Date.now());
+      return { success: true, vehicleId, tripId, events: results.length };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: trackingConfig.queue.concurrency }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[Geofence] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[Geofence] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[Geofence] Job ${job.id} completed`));
+  worker.on("failed", (job, err) => logger.error(`[Geofence] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
-function createOfflineDetectionWorker(): Worker<OfflineDetectionJob> {
-  const worker = new Worker<OfflineDetectionJob>(
+function createOfflineDetectionWorker(): Worker {
+  const worker = new Worker(
     "offline-detection",
-    async (job) => {
-      const { vehicleId, lastSeen } = job.data;
-      logger.info(`[Offline Detection] Checking offline status for vehicle ${vehicleId}`);
-      
-      // TODO: Implement offline/stale detection
-      // This will be implemented in P2-15
-      
-      return { success: true, vehicleId };
+    async () => {
+      const result = await sweepOfflineVehicles();
+      const drivers = await sweepIdleDrivers();
+      logger.info(`[Offline Detection] Sweep complete`, { ...result, ...drivers });
+      return { success: true, ...result, ...drivers };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: 1 }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[Offline Detection] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[Offline Detection] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[Offline Detection] Job ${job.id} completed`));
+  worker.on("failed", (job, err) => logger.error(`[Offline Detection] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
-function createTripStatsWorker(): Worker<TripStatsJob> {
-  const worker = new Worker<TripStatsJob>(
+function createTripStatsWorker(): Worker<{ tripId: string }> {
+  const worker = new Worker<{ tripId: string }>(
     "trip-statistics",
     async (job) => {
-      const { tripId, vehicleId, driverId } = job.data;
-      logger.info(`[Trip Stats] Computing statistics for trip ${tripId}`);
-      
-      // TODO: Implement trip statistics computation
-      // This will be implemented in P2-21
-      
+      const { tripId } = job.data;
+      const stats = await computeTripStatistics(tripId);
+      if (!stats) throw new Error(`Trip ${tripId} not found for statistics computation`);
       return { success: true, tripId };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: trackingConfig.queue.concurrency }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[Trip Stats] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[Trip Stats] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[Trip Stats] Job ${job.id} completed`));
+  worker.on("failed", (job, err) => logger.error(`[Trip Stats] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
@@ -229,28 +131,14 @@ function createOccupancyWorker(): Worker<OccupancyJob> {
   const worker = new Worker<OccupancyJob>(
     "occupancy-processing",
     async (job) => {
-      const { vehicleId, tripId, passengerCount, capacity } = job.data;
-      logger.info(`[Occupancy] Processing occupancy for vehicle ${vehicleId}, trip ${tripId}`);
-      
-      // TODO: Implement occupancy derivation and broadcast
-      // This will be implemented in P2-22
-      
-      return { success: true, vehicleId, tripId };
+      const { vehicleId, tripId, routeId, passengerCount, capacity } = job.data;
+      const result = await processOccupancyUpdate(vehicleId, tripId, routeId, passengerCount, capacity);
+      return { success: true, vehicleId, tripId, level: result.currentLevel };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: trackingConfig.queue.concurrency }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[Occupancy] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[Occupancy] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[Occupancy] Job ${job.id} completed`));
+  worker.on("failed", (job, err) => logger.error(`[Occupancy] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
@@ -259,62 +147,44 @@ function createEventProcessingWorker(): Worker<EventProcessingJob> {
     "event-processing",
     async (job) => {
       const { eventType, payload, traceId } = job.data;
-      logger.info(`[Event Processing] Processing event ${eventType} (trace: ${traceId})`);
-      
-      // TODO: Implement event bus publishing to Person 1
-      // This will be implemented in P2-23
-      
-      return { success: true, eventType };
+      // BullMQ-backed durable redelivery layer: Redis Pub/Sub gives no
+      // redelivery guarantee on its own, so every publishEvent() call also
+      // lands here; this re-publishes so a consumer that reconnects after a
+      // restart still receives it (idempotent downstream via traceId).
+      // Uses republishEvent (not publishEvent) so it does not re-enqueue itself.
+      await republishEvent(eventType, payload, traceId);
+      return { success: true, eventType, traceId };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: trackingConfig.queue.concurrency }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[Event Processing] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[Event Processing] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[Event Processing] Job ${job.id} completed`));
+  worker.on("failed", (job, err) => logger.error(`[Event Processing] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
-function createHistoricalDataWorker(): Worker<HistoricalDataJob> {
-  const worker = new Worker<HistoricalDataJob>(
+function createHistoricalDataWorker(): Worker {
+  const worker = new Worker(
     "historical-data",
     async (job) => {
-      const { tripId, points } = job.data;
-      logger.info(`[Historical Data] Persisting GPS history for trip ${tripId} (${points.length} points)`);
-      
-      // TODO: Implement GPS history persistence to MongoDB time-series
-      // This will be implemented in P2-19
-      
-      return { success: true, tripId, pointsCount: points.length };
+      if (job.name === "archive-old-gps") {
+        const settings = await getTrackingSettings();
+        const result = await archiveOldGPSHistory(settings.gpsHistoryRetentionDays);
+        return { success: true, ...result };
+      }
+      const point = job.data as GPSPoint;
+      await persistGPSPointDirect(point);
+      return { success: true, vehicleId: point.vehicleId, tripId: point.tripId };
     },
-    {
-      connection,
-      concurrency: trackingConfig.queue.concurrency,
-    }
+    { connection, concurrency: trackingConfig.queue.concurrency }
   );
-
-  worker.on("completed", (job) => {
-    logger.debug(`[Historical Data] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error(`[Historical Data] Job ${job?.id} failed: ${err.message}`);
-  });
-
+  worker.on("completed", (job) => logger.debug(`[Historical Data] Job ${job.id} (${job.name}) completed`));
+  worker.on("failed", (job, err) => logger.error(`[Historical Data] Job ${job?.id} failed: ${err.message}`));
   return worker;
 }
 
 export async function startTrackingWorkers(): Promise<void> {
   await connectDB();
-  
+
   workers.push(
     createGPSProcessingWorker(),
     createETACalculationWorker(),
@@ -325,6 +195,8 @@ export async function startTrackingWorkers(): Promise<void> {
     createEventProcessingWorker(),
     createHistoricalDataWorker()
   );
+
+  await scheduleRepeatableJobs();
 
   logger.info("All tracking workers started");
 
@@ -343,7 +215,7 @@ export async function startTrackingWorkers(): Promise<void> {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   startTrackingWorkers().catch((err) => {
-    logger.error(`Failed to start tracking workers: ${err.message}`);
+    logger.error(`Failed to start tracking worker: ${err.message}`);
     process.exit(1);
   });
 }

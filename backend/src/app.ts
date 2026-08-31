@@ -30,6 +30,7 @@ import { meRouter, adminRequestRouter } from "./modules/me/me.routes.js";
 import syncRoutes from "./modules/sync/sync.routes.js";
 import uploadRoutes from "./modules/uploads/uploads.routes.js";
 import trackingRoutes from "./modules/tracking/tracking.routes.js";
+import gtfsRealtimeRoutes from "./modules/tracking/gtfs/gtfs-rt.routes.js";
 import notificationRoutes from "./modules/notification/notification.routes.js";
 
 dotenv.config();
@@ -97,6 +98,7 @@ app.use("/api/v1/vehicles", publicVehicleRouter);
 app.use("/api/v1/routes", publicRouteRouter);
 app.use("/api/v1/stops", publicStopRouter);
 app.use("/api/v1/tracking", trackingRoutes);
+app.use("/api/v1/gtfs/realtime", gtfsRealtimeRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
 // OpenAPI spec + mock server (P1-18)

@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { Stop, IStop } from "./stop.model.js";
 import { AuditLog } from "../../models/auditLog.model.js";
 import { AppError } from "../../utils/AppError.js";
+import { clearRouteCache } from "../tracking/geo/geospatial.service.js";
 
 export type StopInput = {
   name: string;
@@ -132,6 +133,7 @@ export const updateStop = async (id: string, input: StopUpdate, a?: { id?: strin
   if (input.isActive !== undefined) doc.isActive = input.isActive;
 
   await doc.save();
+  if (input.location !== undefined) clearRouteCache();
 
   await AuditLog.create({
     ...actor(a),
