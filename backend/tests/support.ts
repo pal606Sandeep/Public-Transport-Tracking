@@ -47,6 +47,8 @@ export const USER_EMAIL = "user@test.com";
 export const USER_PASSWORD = "Password123!";
 export const DRIVER_EMAIL = "driver@test.com";
 export const DRIVER_PASSWORD = "DriverPass123!";
+export const CONDUCTOR_EMAIL = "conductor@test.com";
+export const CONDUCTOR_PASSWORD = "ConductorPass123!";
 
 async function seedData(): Promise<void> {
   for (const code of PERMISSIONS) {
@@ -82,6 +84,13 @@ async function seedData(): Promise<void> {
     email: DRIVER_EMAIL,
     password: bcrypt.hashSync(DRIVER_PASSWORD, 10),
     role: "DRIVER",
+    isActive: true,
+  });
+  await User.create({
+    name: "Conductor",
+    email: CONDUCTOR_EMAIL,
+    password: bcrypt.hashSync(CONDUCTOR_PASSWORD, 10),
+    role: "CONDUCTOR",
     isActive: true,
   });
 }
