@@ -104,3 +104,29 @@ export const broadcastRouteDeviation = (
   broadcastToTrip(tripId, "route:deviation", data);
   broadcastToFleetAll("route:deviation", data);
 };
+
+/**
+ * P2-25 delivery side for P1-54's admin dispatch messaging: broadcasts a
+ * dispatcher-authored message to the ops `fleet:all` stream (or a specific
+ * `vehicle:{id}` room when targeted). P1-54 itself — the admin REST endpoint
+ * that calls this — has not been built yet, so this is unused in production
+ * until then.
+ */
+export const broadcastDispatchMessage = (
+  message: string,
+  data: { fromUserId?: string; targetVehicleId?: string; priority?: "NORMAL" | "URGENT" } = {}
+): void => {
+  const payload = { message, ...data, timestamp: Date.now() };
+  if (data.targetVehicleId) {
+    broadcastToVehicle(data.targetVehicleId, "dispatch:message", payload);
+  }
+  broadcastToFleetAll("dispatch:message", payload);
+};
+
+/** P2-25 delivery side for P1-54's `trip:force_end`; same not-yet-called caveat as above. */
+export const broadcastTripForceEnd = (tripId: string, vehicleId: string, reason: string, byUserId?: string): void => {
+  const data = { tripId, vehicleId, reason, byUserId, timestamp: Date.now() };
+  broadcastToVehicle(vehicleId, "trip:force_end", data);
+  broadcastToTrip(tripId, "trip:force_end", data);
+  broadcastToFleetAll("trip:force_end", data);
+};

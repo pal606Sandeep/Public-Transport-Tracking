@@ -131,3 +131,68 @@ export const getVehicleGeofenceState = (vehicleId: string, tripId: string): Vehi
 export const clearVehicleGeofenceState = (vehicleId: string, tripId: string): void => {
   vehicleStates.delete(`${vehicleId}:${tripId}`);
 };
+
+export interface DepotGeofenceResult {
+  eventType: Extract<GeofenceEventType, "depot:arrival" | "depot:departure">;
+  vehicleId: string;
+  depotId: string;
+  depotName: string;
+  distanceMeters: number;
+  timestamp: number;
+  lat: number;
+  lng: number;
+}
+
+interface VehicleDepotState {
+  depotId: string | null;
+  arrivedAt: number | null;
+}
+
+const vehicleDepotStates = new Map<string, VehicleDepotState>();
+
+/**
+ * P2-10 depot arrival/departure — runs independently of stop geofencing
+ * (no trip/route required) since a vehicle can arrive at a depot with no
+ * active trip. Depot locations come from `getTrackingSettings().depots`,
+ * a System Settings stub (see tracking-settings.service.ts) standing in
+ * for a real depot data model that Person 1 hasn't built yet.
+ */
+export const processDepotGeofence = async (
+  vehicleId: string,
+  lat: number,
+  lng: number,
+  timestamp: number
+): Promise<DepotGeofenceResult[]> => {
+  const settings = await getTrackingSettings();
+  if (!settings.depots.length) return [];
+
+  const results: DepotGeofenceResult[] = [];
+  let state = vehicleDepotStates.get(vehicleId);
+  if (!state) {
+    state = { depotId: null, arrivedAt: null };
+    vehicleDepotStates.set(vehicleId, state);
+  }
+
+  for (const depot of settings.depots) {
+    const distanceMeters = getDistanceInMeters(lat, lng, depot.lat, depot.lng);
+    const withinRadius = distanceMeters <= settings.depotRadiusMeters;
+
+    if (withinRadius && state.depotId !== depot.id) {
+      results.push({ eventType: "depot:arrival", vehicleId, depotId: depot.id, depotName: depot.name, distanceMeters, timestamp, lat, lng });
+      state.depotId = depot.id;
+      state.arrivedAt = timestamp;
+    } else if (!withinRadius && state.depotId === depot.id) {
+      results.push({ eventType: "depot:departure", vehicleId, depotId: depot.id, depotName: depot.name, distanceMeters, timestamp, lat, lng });
+      state.depotId = null;
+      state.arrivedAt = null;
+    }
+  }
+
+  return results;
+};
+
+export const getVehicleDepotState = (vehicleId: string): VehicleDepotState | null => vehicleDepotStates.get(vehicleId) ?? null;
+
+export const clearVehicleDepotState = (vehicleId: string): void => {
+  vehicleDepotStates.delete(vehicleId);
+};
