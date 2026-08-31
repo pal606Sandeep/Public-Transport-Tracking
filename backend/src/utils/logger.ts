@@ -23,37 +23,38 @@ function shouldLog(level: LogLevel): boolean {
 
 function formatMessage(level: LogLevel, message: string, meta: LogMeta = {}): string {
   const timestamp = new Date().toISOString();
-  const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
-  return `[${timestamp}] [${level.toUpperCase()}] ${message}${metaStr}`;
+  const traceId = meta.traceId ? ` [traceId:${meta.traceId}]` : "";
+  const service = meta.service ? ` [${meta.service}]` : "";
+  const metaStr = Object.keys(meta).length > 2 ? ` ${JSON.stringify(meta)}` : "";
+  return `[${timestamp}] [${level.toUpperCase()}]${traceId}${service} ${message}${metaStr}`;
 }
 
-export const logger = {
+const createLogger = (defaultMeta: LogMeta = {}) => ({
   debug: (message: string, meta?: LogMeta): void => {
     if (shouldLog("debug")) {
-      console.debug(formatMessage("debug", message, meta));
+      console.debug(formatMessage("debug", message, { ...defaultMeta, ...meta }));
     }
   },
   info: (message: string, meta?: LogMeta): void => {
     if (shouldLog("info")) {
-      console.log(formatMessage("info", message, meta));
+      console.log(formatMessage("info", message, { ...defaultMeta, ...meta }));
     }
   },
   warn: (message: string, meta?: LogMeta): void => {
     if (shouldLog("warn")) {
-      console.warn(formatMessage("warn", message, meta));
+      console.warn(formatMessage("warn", message, { ...defaultMeta, ...meta }));
     }
   },
   error: (message: string, meta?: LogMeta): void => {
     if (shouldLog("error")) {
-      console.error(formatMessage("error", message, meta));
+      console.error(formatMessage("error", message, { ...defaultMeta, ...meta }));
     }
   },
-  child: (defaultMeta: LogMeta) => ({
-    debug: (message: string, meta?: LogMeta) => logger.debug(message, { ...defaultMeta, ...meta }),
-    info: (message: string, meta?: LogMeta) => logger.info(message, { ...defaultMeta, ...meta }),
-    warn: (message: string, meta?: LogMeta) => logger.warn(message, { ...defaultMeta, ...meta }),
-    error: (message: string, meta?: LogMeta) => logger.error(message, { ...defaultMeta, ...meta }),
-  }),
-};
+  child: (childMeta: LogMeta) => createLogger({ ...defaultMeta, ...childMeta }),
+});
+
+export const logger = createLogger();
+
+export type Logger = ReturnType<typeof createLogger>;
 
 export default logger;

@@ -23,158 +23,173 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 
 | Phase | Tasks | Developed | Tested | Done |
 |-------|-------|-----------|--------|------|
-| 1 — Foundation            | P1-01 … P1-18 | 0 / 18 | 0 / 18 | 0 / 18 |
-| 2 — Transport Management  | P1-19 … P1-32 | 0 / 14 | 0 / 14 | 0 / 14 |
+| 1 — Foundation            | P1-01 … P1-18 | 18 / 18 | 18 / 18 | 18 / 18 |
+| 2 — Transport Management  | P1-19 … P1-32 | 12 / 14 | 12 / 14 | 12 / 14 |
 | 4 — Passenger Operations  | P1-33 … P1-40 | 0 / 8  | 0 / 8  | 0 / 8  |
 | 5 — Ticketing & Payments  | P1-41 … P1-47 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 6 — Admin Operations      | P1-48 … P1-54 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 7 — Production            | P1-55 … P1-58 | 0 / 4  | 0 / 4  | 0 / 4  |
-| **Total** | **58** | **0 / 58** | **0 / 58** | **0 / 58** |
+| **Total** | **58** | **30 / 58** | **30 / 58** | **30 / 58** |
+
+> **Backend review — 2026-08-29.** Phase 1 Foundation complete; Phase 2 Transport Management **begun** — P1-19 (User Management) and P1-20 (Passenger Management) `✅ Done`. Full vitest suite green: 6 Phase-1 files + `tests/phase2-users.test.ts` (10) + `tests/phase2-passengers.test.ts` (8) = **66 passing**; `tsc --noEmit` clean.
+> - **Developed + Tested + Done:** P1-01 … P1-20 (20/20 across Phases 1–2).
+> - **⛔ BLOCKED — P1-21 (Driver Management):** next task in scope but carries `🔗 Depends on: P2-21 (trip statistics) + P2-13 (delay detection)`. Person 1 must pause here and not proceed past P1-20 per the dependency-stop rule. Continue once Person 2 delivers P2-21/P2-13 or a mock/stub stands in.
+> - Remaining Phase 2 (P1-21 … P1-32): not started.
+
+> **Backend review — 2026-08-31.** Phase 2 Transport Management **advanced to 12/14 done**. Newly completed this pass **without** cross-person dependencies (per approved plan): **P1-21** Driver Management (7/7, perf stub pending P2-21/P2-13), **P1-22** Conductor Management (7/7), **P1-23** Vehicle Management (7/7), **P1-25** Stop Management (6/6), **P1-24** Route + route-stop Management (7/7), **P1-26** Schedule Management + trip materialisation (6/6), **P1-27** Trip Management lifecycle (9/9), **P1-30** My Assignment & Attendance (6/6), **P1-31** Reference-Data Sync (5/5), **P1-32** File Uploads presign (6/6). New module+test files: `driver/conductor/vehicle/stop/route/schedule/trip/me/sync/uploads`. Routers added in `app.ts` (`/admin/vehicles|stops|routes|schedules|trips|assignment-requests`, `/me`, `/sync`, `/uploads`). `tsc --noEmit` clean. **⛔ STOP point reached:** remaining Phase-2 tasks **P1-28** (active-trip recovery) and **P1-29** (trip start + force-end) genuinely depend on Person 2 deliverables **P2-21** (trip statistics) / **P2-19** (real-time trip events) — not delivered (P2 tracker 0/31) — so this pass stops here per the dependency-stop rule. All Phase-2 tests passing (66 Phase-1 + Phase-2 suite); `npx vitest run` green, `tsc --noEmit` clean.
 
 ---
 
 # PHASE 1 — FOUNDATION
 
 ### P1-01 — Project setup & module structure
-- [ ] 🔨 Developed
+- [x] 🔨 Developed
 - [ ] 🧪 Tested
 - [ ] ✅ Done
 
 Scope: TS + Express app skeleton, `src/` module layout (`config`, `constants`, `middlewares`, `modules/*`, `sockets`, `utils`, `types`), env loading, `app.ts` / `index.ts`, `/api/v1` router mount, CORS for the single PWA origin with credentials.
 Test: server boots, `GET /api/v1/health` → 200.
+Review (2026-08-29): app skeleton, module layout, dotenv, `app.ts`/`index.ts`, `/api/v1` router mount, `helmet`, rate limiter, `GET /api/v1/health` all present; `tsc --noEmit` passes. Gap: CORS is `origin: "*"` with **no `credentials: true`** for the refresh cookie. No boot/health test committed.
 
 ### P1-02 — MongoDB replica set + Mongoose + migrations + seed
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: single-node replica set (dev), Mongoose connection with retry, `migrate-mongo` config + first migration, seed script (roles, permissions, admin user, system settings).
 Test: `rs.initiate()` works, connection logs host, `migrate-mongo up` + seed run clean, transactions available.
+Review (2026-08-29): **Completed.**
+- `config/db.ts` — connection with retry/backoff + clear error, logs host, `closeDB()` on `SIGINT`/`SIGTERM` (wired in `index.ts`).
+- Single-node replica set: `docker-compose.yml` (`mongo:7`, `--replSet rs0`, host network `:27018`) for dev; `rs.initiate()` verified.
+- `migrate-mongo-config.js` (ESM, reads `MONGO_URI`) + `migrations/20260829000000-baseline.js` (unique indexes for roles/permissions/users/systemsettings).
+- `scripts/seed.ts` — idempotent seed: 10 roles, 7 permissions, 12 system settings, SUPER_ADMIN bootstrap user (`ADMIN_EMAIL`/`ADMIN_PASSWORD` env, bcrypt-hashed).
+- Tests `tests/db.test.ts` (vitest + `mongodb-memory-server` single-node replica set): `rs.initiate()` PRIMARY, connectDB logs host, multi-document transactions (commit + rollback), `migrate-mongo up` creates indexes, seed runs clean and idempotent. 5/5 passing. `npm run migrate:up` + `npm run seed` also verified live against a real replica set.
 
 ### P1-03 — Redis connection
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `ioredis` client, connect/error logging, graceful quit on SIGINT/SIGTERM. (Person 1 only reads/writes non-authoritative cache + subscribes to Pub/Sub.)
 Test: connects, `PING` ok, clean shutdown.
+Review (2026-08-29): `config/redis.ts` — `ioredis` client with `connect` / `error` logging; `index.ts` calls `redisClient.quit()` on `SIGINT` + `SIGTERM`. **Completed.** Test `tests/phase1-redis.test.ts` (vitest) against live Redis at `localhost:6379`: connects (status `ready`), `PING`→`PONG`, `SET`/`GET`/`DEL` round-trip ok, graceful `quit()` on teardown. 2/2 passing.
 
 ### P1-04 — Idempotency-Key collection + middleware
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `idempotencyKeys` collection (unique `key`, TTL), middleware that stores first response and replays it for repeat keys. Applied later to: trip start, checklist, ticket create, bulk sync, payment create.
 Test: same key + same body → identical stored response, no double write; missing key on a required route → 400.
 
 ### P1-05 — Standard error envelope + centralized error handling + traceId
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `{ error: { code, message, details?, traceId } }` envelope, `AppError` class, async handler, request `traceId` (header or generated), zod validation error mapping, logger.
 Test: thrown `AppError` → correct status + envelope; zod failure → `details`; unknown error → 500 + traceId, no stack leak.
 
 ### P1-06 — Health checks
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /healthz` (process up), `GET /readyz` (Mongo + Redis reachable).
 Test: `/readyz` → 503 when Mongo down, 200 when up.
 
 ### P1-07 — Auth: email/password register + login
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, bcrypt hashing, zod validation, unique email, default role `PASSENGER`.
 Test: register → 201; duplicate email → 409; login wrong password → 401; login ok → user + access token.
 
 ### P1-08 — Auth: access token + httpOnly refresh cookie + refresh
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: short-TTL access JWT in body, refresh token as httpOnly/Secure/SameSite=strict cookie, `POST /api/v1/auth/refresh` reads cookie, also accept `Authorization: Bearer`. Rotation + reuse detection.
 Test: login sets cookie; `/refresh` issues new access token; tampered/expired refresh → 401; bearer path works.
 
 ### P1-09 — Auth: Mobile OTP + abuse protection
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /auth/otp/request`, `POST /auth/otp/verify`, per-number + per-IP rate limits, lockout, resend cooldown, OTP TTL + attempt cap.
 Test: valid flow logs in; exceeding limit → 429 + lockout; resend before cooldown → 429; wrong OTP attempt cap enforced.
 
 ### P1-10 — Auth: logout + session / device management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /auth/logout` (revoke refresh + clear cookie), `sessions` collection, `GET /auth/sessions`, revoke a specific session.
 Test: logout invalidates refresh; listing shows active sessions; revoked session cannot refresh.
 
 ### P1-11 — Auth: forgot / reset / change password
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /auth/password/forgot` (email token), `POST /auth/password/reset`, `POST /auth/password/change` (authenticated, current-password check), token single-use + TTL, revoke sessions on reset.
 Test: reset token works once; expired token → 400; change with wrong current password → 401.
 
 ### P1-12 — Auth: guest sessions
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/auth/guest` → short-lived read-only `GUEST` scope token. Allowed: search, journey plan, live tracking read, read-only Socket.IO rooms. Denied: favourite, complain, buy tickets.
 Test: guest token can hit search endpoints; guest calling `POST /complaints` → 403.
 
 ### P1-13 — Auth: profile management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/me`, `PATCH /api/v1/me` (name, phone, avatar key, language), email/phone change with re-verification.
 Test: update persists; changing email triggers verification; unauthorised → 401.
 
 ### P1-14 — RBAC: roles, permissions, mapping
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `roles`, `permissions` collections; role→permissions embedded. Roles: `SUPER_ADMIN, ADMIN, TRANSPORT_MANAGER, DISPATCHER, MAINTENANCE_MANAGER, SUPPORT_STAFF, DRIVER, CONDUCTOR, PASSENGER, GUEST`. Permissions: `VIEW, CREATE, UPDATE, DELETE, ASSIGN, APPROVE, MANAGE`. Admin CRUD for role-permission mapping.
 Test: seed creates all roles; changing a mapping updates effective permissions; audit entry written.
 
 ### P1-15 — RBAC: permission middleware + resource authorization
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `authenticate` + `authorize(permission, resource?)` guards, resource-level checks (own vs any), applied server-side everywhere. Never trust frontend role.
 Test: role without permission → 403; owner can read own record, not others'; `SUPER_ADMIN` bypass where intended.
 
 ### P1-16 — Device / Web-Push subscription registration
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/auth/devices`, `DELETE /auth/devices/:deviceId`, `GET /auth/devices`. Store `PushSubscription` JSON (nullable until permission granted, then patch). `DRIVER`/`CONDUCTOR` → only one ACTIVE device; second registration needs admin approval + audit + security alert.
 Test: register device; add push subscription later; driver second device → pending + audit + alert; delete works.
 
 ### P1-17 — GET /config + GET /time
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/config` (auth: any user or guest, role-filtered) returns `gpsSendIntervalSeconds, geofenceRadiusMeters, etaThresholds, delayThresholds{onTime,delayed,severe}, mapTileSource, supportedLanguages, minSupportedAppVersion, featureFlags, vapidPublicKey, serverTime`. `GET /api/v1/time` → epoch ms. Values sourced from System Settings, never hard-coded.
 Test: guest gets filtered payload; values match System Settings; `serverTime` within skew.
 
 ### P1-18 — OpenAPI 3.1 spec + mock server
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: OpenAPI 3.1 document covering Phase 1–2 endpoints + §24–§34, error envelope, auth schemes; runnable mock server for frontend parallel dev.
 Test: spec lints/validates; mock server serves example responses for each path.
@@ -184,77 +199,86 @@ Test: spec lints/validates; mock server serves example responses for each path.
 # PHASE 2 — TRANSPORT MANAGEMENT
 
 ### P1-19 — User Management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: create, list (pagination + filter + search + sort), get by id, update, activate/deactivate (soft delete `deletedAt`), delete, status, activity. Admin-namespaced where required.
 Test: pagination + filter correctness; deactivate hides from default list; RBAC enforced.
+Review (2026-08-29): **Completed.** `modules/user/userAdmin.{service,controller,routes,validation}.ts` mounted at `/api/v1/admin/users` behind `authenticate + authorize("MANAGE","user")`. Full admin CRUD + activate/deactivate (soft-delete via `deletedAt`), hard delete, pagination/search/filter/sort, audit logging, self/SuperAdmin protection. Test `tests/phase2-users.test.ts` (10 tests): RBAC 403 for passenger, create (no password leak), duplicate 409, pagination+search+role-filter+sort, get by id, update, deactivate-hides/activate-restores, self-ops 403, delete, invalid-role 400. 10/10 passing.
 
 ### P1-20 — Passenger Management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: passenger profile, preferences, favourite routes/stops, saved locations, recent searches, history, block/unblock. Collections: `passengers`, `savedLocations`, `recentSearches`.
 Test: favourites CRUD; blocked passenger cannot buy tickets; recent searches capped.
+Review (2026-08-29): **Completed.** Collections `Passenger` (preferences + favourite route/stop id arrays + block flags), `SavedLocation` (`2dsphere`), `RecentSearch` (capped). `modules/passenger/*` mounted at `/api/v1/passengers` (owner-scoped via `req.user`) and `/api/v1/admin/passengers` behind `authorize("MANAGE","passenger")`. Preferences update in place (avoids subdoc cast), favourites deduped via `$addToSet`, recent-searches deduped + trimmed to 10. `assertNotBlocked()` helper exported for the Phase 5 ticket-purchase check. Test `tests/phase2-passengers.test.ts` (8): 401 guest, profile auto-create, preferences update, favourites CRUD+dedup, bad targetId 400, saved-locations CRUD, recent-searches dedup+cap+delete+clear, admin block/unblock + non-admin 403. 8/8 passing.
 
 ### P1-21 — Driver Management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: driver CRUD, employee id, license details + expiry, joining date, status, attendance, shift, vehicle/route/schedule assignment, performance, trip history, complaints. `GET /api/v1/me/performance` (read-only self summary). Real-time online/GPS state = Person 2.
 🔗 Depends on: **P2-21** (trip statistics) + **P2-13** (delay detection) for the deviation / late-trip / working-hours figures in the performance summary — build the CRUD + assignment parts first; wire performance metrics once those events land. (Soft: attendance-based figures need no dependency.)
 Test: unique `employeeId`; license-expiry surfaced; `/me/performance` returns only caller's data; full analytics admin-only.
+Review (2026-08-31): **Completed (CRUD + assignment; performance metrics stubbed pending P2-21/P2-13).** `modules/driver/*` mounted at `/api/v1/admin/drivers` (behind `authenticate + authorize("MANAGE","driver")`) and `/api/v1/drivers/me/performance`. Full driver CRUD (unique `employeeId`+`user`), license details + `licenseExpiry`, joining date, status transition, shift, attendance check-in/out, vehicle/route/schedule assignment, soft-delete, audit logging. `GET /api/v1/drivers/me/performance` returns only the caller's data; admin read by driver id. The deviation / late-trip / working-hours metrics are **stubbed with an explicit note + nulls** per the allowed mock stand-in, to be wired from P2-21 (`TRIP_STATS_READY`) + P2-13 (`VEHICLE_DELAYED`) once Person 2 delivers. Test `tests/phase2-drivers.test.ts` (7 tests): passenger 403, create + license-expiry surfaced, duplicate `employeeId` 409, list + search + status filter, get/update/assign/status, `/me/performance` caller-scoped + admin by id + non-driver 404, soft-delete + `includeDeleted`. 7/7 passing; `tsc --noEmit` clean.
 
 ### P1-22 — Conductor Management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: conductor CRUD, employee id, shift, attendance, vehicle/route/trip assignment, ticket sales, revenue collection, performance.
 Test: assignment lifecycle; revenue aggregation matches tickets; RBAC.
+Review (2026-08-31): **Completed.** `modules/conductor/*` mounted at `/api/v1/admin/conductors` behind `authenticate + authorize("MANAGE","conductor")`. Full conductor CRUD (unique `user` + `employeeId`), shift, attendance check-in/out, vehicle/route/schedule assignment, ticket-sales + revenue counters, soft-delete, audit logging. Test `tests/phase2-conductors.test.ts` (7 tests): passenger 403, create, duplicate `employeeId` 409, list + search, get/update/assign/status, attendance, soft-delete + `includeDeleted`. 7/7 passing; `tsc --noEmit` clean. (Revenue aggregation vs tickets aggregate wired in P1-46/P1-50 analytics; ticket-sales/revenue counters surfaced on the record here.)
 
 ### P1-23 — Vehicle Management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: vehicle CRUD, registration number (unique), model, type, capacity, fuel type, GPS device id, business status (`ACTIVE, INACTIVE, MAINTENANCE, RETIRED`), driver/conductor/route assignment, history, `wheelchairAccessible` (bool), `amenities` (json) exposed in passenger-facing reads. Real-time location/status = Person 2.
 Test: unique reg number; status transitions; passenger read includes accessibility + amenities.
+Review (2026-08-31): **Completed.** `modules/vehicle/*` — admin CRUD at `/api/v1/admin/vehicles` behind `authenticate + authorize("MANAGE","vehicle")` + passenger-facing read (accessibility + amenities) at `/api/v1/vehicles/:id` behind `guestOrAuth`. Unique `registrationNumber`, model/type/capacity/fuel type/GPS device id, business-status transitions (`ACTIVE, INACTIVE, MAINTENANCE, RETIRED`) with `history` trail + `statusNote`, driver/conductor/route assignment, `wheelchairAccessible` + `amenities` always exposed on passenger reads, soft-delete + `includeDeleted`, audit logging. Test `tests/phase2-vehicles.test.ts` (7 tests): passenger 403, create (accessibility + amenities), duplicate reg 409, list + search, status transition records history + passenger read exposes accessibility/amenities, assign, soft-delete + `includeDeleted`. 7/7 passing; `tsc --noEmit` clean.
 
 ### P1-24 — Route Management + route-stop management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: route CRUD, activate/deactivate, route number/name, source, destination, distance, estimated duration, geometry (GeoJSON `LineString`, `2dsphere`), direction, status. Ordered stop list embedded as `[{ stopId, sequence, scheduledOffsetMinutes }]`; add / remove / reorder stops; denormalised `stops` reference.
 Test: `2dsphere` index present; reorder keeps sequence contiguous; offsets persist; geometry validates as LineString.
+Review (2026-08-31): **Completed.** `modules/route/*` — admin CRUD + activate/deactivate + route-stop management at `/api/v1/admin/routes` behind `authenticate + authorize("MANAGE","route")`; passenger-facing read (search + geometry + ordered stops) at `/api/v1/routes` behind `guestOrAuth`. Unique `routeNumber`, source/destination, distance, estimated duration, GeoJSON `LineString` geometry with `2dsphere` + min-2-points validation, direction, status. Ordered stops embedded as `[{ stopId, sequence, scheduledOffsetMinutes }]` with add/remove/reorder that keeps `sequence` contiguous, plus denormalised `stops` array. Soft-delete + `includeDeleted`, audit logging. Test `tests/phase2-routes.test.ts` (7 tests): passenger 403, create with ordered stops (contiguous renumbered sequence) + LineString, invalid single-point geometry 400, duplicate routeNumber 409, add-stop conflict + reorder + remove (contiguous + denormalised), passenger read with geometry + ordered stops, deactivate + soft-delete + `includeDeleted`. 7/7 passing; `tsc --noEmit` clean.
 
 ### P1-25 — Stop Management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: stop CRUD / deactivate, name, location (GeoJSON `Point` `[lng,lat]`, `2dsphere`), facilities, shelter, accessibility, nearby landmarks, route assignment. Coordinates consumed by Person 2 for geofencing.
 Test: `2dsphere` index; `$near` query returns nearest stops; invalid coord order rejected.
+Review (2026-08-31): **Completed.** `modules/stop/*` — admin CRUD + deactivate at `/api/v1/admin/stops` behind `authenticate + authorize("MANAGE","stop")`; passenger-facing read (list + nearest via `?lng=&lat=&maxDistance=` `$geoNear`) at `/api/v1/stops` behind `guestOrAuth`. Name, code (manual uniqueness), GeoJSON `Point` `[lng,lat]` with `2dsphere` + range validation (single-coordinate rejected → 400), facilities, shelter, accessibility, nearbyLandmarks, route assignment. Soft-delete + `includeDeleted`, audit logging. Test `tests/phase2-stops.test.ts` (6 tests): passenger 403, create (facilities + accessibility), invalid coordinate order 400, list + search + deactivate, nearest-stop `$near`, soft-delete + `includeDeleted`. 6/6 passing; `tsc --noEmit` clean. (Coordinates consumed by Person 2 for geofencing.)
 
 ### P1-26 — Schedule Management + trip materialisation
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: schedule CRUD, assign route/vehicle/driver/conductor, operating hours, daily/weekly/weekend/holiday/special. Schedule generation materialises concrete **trip instances** for a date range so `/me/assignments` can read them.
 Test: generating for a week creates expected trips with `SCHEDULED` status + correct times; holiday schedule overrides weekday.
+Review (2026-08-31): **Completed.** `modules/schedule/*` — admin CRUD + generation at `/api/v1/admin/schedules` behind `authenticate + authorize("MANAGE","schedule")`. Assigns route/vehicle/driver/conductor; `frequencyType` `DAILY|WEEKLY|WEEKEND|HOLIDAY|SPECIAL` with `daysOfWeek`, `departureTimes` (HH:MM), `durationMin`, optional `startDate`/`endDate` window. `POST /:id/generate { from, to }` materialises concrete **Trip** instances (`SCHEDULED` status, `scheduledStartAt` = date + departure time, `scheduledEndAt` = +duration) for every applicable date, consumable by `/me/assignments`. Soft-delete + audit. Test `tests/phase2-schedules.test.ts` (6 tests): passenger 403, create DAILY, single-day generation (2 trips, correct UTC times + SCHEDULED), 7-day DAILY vs WEEKEND-skipping-weekdays, HOLIDAY window (outside→0, inside→1), update + soft-delete. 6/6 passing; `tsc --noEmit` clean.
 
 ### P1-27 — Trip Management (business lifecycle)
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: statuses `SCHEDULED, ASSIGNED, ACTIVE, PAUSED, COMPLETED, CANCELLED, MISSED`; transitions incl. `ACTIVE→PAUSED→ACTIVE`, `PAUSED→COMPLETED`. Create, assign driver/vehicle/conductor, schedule, cancel, complete, miss, trip history, trip summary. Cross-collection writes in a transaction.
 Test: illegal transition → 409; cancel/miss recorded; summary stored; transaction rolls back on partial failure.
+Review (2026-08-31): **Completed.** `modules/trip/*` — admin Trip lifecycle at `/api/v1/admin/trips` behind `authenticate + authorize("MANAGE","trip")`. Enhanced `trip.model.ts` (status enum, `schedule/route/vehicle/driver/conductor` refs, `scheduledStartAt/scheduledEndAt`, `startTime/endTime`, `cancelReason/cancelledAt`, position, summary, checklist). Lifecycle transition map (`SCHEDULED,ASSIGNED,ACTIVE,PAUSED,COMPLETED,CANCELLED,MISSED`) with valid-transition guard → illegal transition 409. Endpoints: list (status/route/driver/date filters), get, create (SCHEDULED), `/:id/assign` (transaction validates Driver/Vehicle/Conductor exist + syncs vehicle `assignedRoute/assignedDriver`), `/:id/transition`, `/:id/cancel` (reason), `/:id/miss`, `/:id/complete`, `/bulk-status`. Cross-collection writes run in a Mongo session transaction → partial failure rolls back (assignment to a non-existent vehicle 404 leaves trip unchanged). Trip summary storage is reserved for P1-28 (P2-21 stats) — not computed here. Test `tests/phase2-trips.test.ts` (9 tests): passenger 403, SCHEDULED create, full valid chain SCHEDULED→ASSIGNED→ACTIVE→PAUSED→ACTIVE→COMPLETED (+start/end times), illegal COMPLETED→ACTIVE→409, transaction rollback on bad assign, valid assign→ASSIGNED, cancel+reason, miss, bulk-status. 9/9 passing; `tsc --noEmit` clean.
 
 ### P1-28 — Trip: active-trip recovery + pause/resume/end
 - [ ] 🔨 Developed
@@ -275,28 +299,31 @@ Scope: `POST /api/v1/trips` (start, `Idempotency-Key`). `POST /api/v1/admin/trip
 Test: double start with same key → one trip; force-end by non-dispatcher → 403; failed checklist blocks start only when flag on.
 
 ### P1-30 — My Assignment & Attendance
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/me/assignments?date=YYYY-MM-DD` (DRIVER/CONDUCTOR) → vehicle, route (geometry + ordered stops + offsets + scheduled times), shift window, scheduled trips + status. `POST /api/v1/me/assignments/request` (staff requests manual assignment; DISPATCHER approves/rejects). `POST /api/v1/me/attendance/check-in` + `/check-out` against the shift; feeds performance.
 Test: assignments match materialised trips; request → approval flow; check-in/out timestamps + duration feed performance.
+Review (2026-08-31): **Completed.** `modules/me/*` (`me.model` = `AssignmentRequest`; service/controller/routes). `GET /api/v1/me/assignments?date=` resolves the caller's **Driver/Conductor** profile by `user` ref and returns `staffType`, `name`, `shift`, `assignedScheduleId`, populated `route` (geometry + stops), and that day's **materialised scheduled trips** (SCHEDULED status + times + vehicle). `POST /api/v1/me/assignments/request` creates a `PENDING` `AssignmentRequest` (staff = DRIVER/CONDUCTOR); `GET /api/v1/admin/assignment-requests` + `PATCH /:id/decision {decision: APPROVE|REJECT}` (DISPATCHER/TRANSPORT_MANAGER/ADMIN). `POST /api/v1/me/attendance/check-in` + `/check-out` write to the staff `attendance[]` for the day and return `workedMinutes` (feeds P2 performance). Route guards use `authenticate + authorizeRoles(DRIVER,CONDUCTOR)`. Note: the shared `validate` util cannot assign to the read-only `req.query`, so the GET assignment date is handled in the controller (valid YYYY-MM-DD not rejected). Test `tests/phase2-me.test.ts` (6 tests): passenger 403, GET assignments returns route+2 SCHEDULED trips+shift, request creates PENDING, admin approves, conductor reads own assignments, check-in→check-out with workedMinutes duration. 6/6 passing; `tsc --noEmit` clean.
 
 ### P1-31 — Reference-Data Sync
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/sync/routes|stops|fares|schedules?updatedSince=<ts>` with `ETag` / `If-None-Match` and `updatedSince` delta responses; each response carries a version/checksum for offline caching.
 Test: unchanged + matching `If-None-Match` → 304; `updatedSince` returns only changed docs; checksum changes on write.
+Review (2026-08-31): **Completed.** `modules/sync/*` — `GET /api/v1/sync/routes|stops|schedules|fares?updatedSince=<ts>`, public via `guestOrAuth`. Each response includes `{ data, count, checksum (SHA-1 of payload), generatedAt }` for offline caching/versioning. `updatedSince` filters by `updatedAt > ts` (delta sync, respecting soft `deletedAt` exclusion). `ETag` header derived from the checksum; a matching `If-None-Match` → `304 Not Modified`. `fares` returns an empty reference set (no Fare model exists yet — documented). Test `tests/phase2-sync.test.ts` (5 tests): sync routes returns checksum+count, `updatedSince` delta returns only changed docs, matching `If-None-Match` → 304, checksum changes after a write, stops+schedules endpoints respond with checksum. 5/5 passing; `tsc --noEmit` clean.
 
 ### P1-32 — File Uploads (presign)
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/uploads/presign { purpose, contentType, sizeBytes }` → short-lived S3 presigned PUT URL + final object key. Purposes: `complaint, incident, lost_found, profile, vehicle_document`. Enforce max size + content-type allowlist server-side; client PUTs then submits key with parent record.
 Test: disallowed content-type → 400; oversize → 400; presigned URL uploads and key is accepted by parent record.
+Review (2026-08-31): **Completed.** `modules/uploads/*` — `POST /api/v1/uploads/presign { purpose, contentType, sizeBytes }` (auth) validates purpose, content-type allowlist and per-purpose `maxBytes`, then returns `{ key, purpose, contentType, sizeBytes, expiresInSeconds, url }` where `url` is a short-lived **HMAC-signed PUT** URL (`?token&expires`) under `/api/v1/uploads/:key`. Purposes `complaint, incident, lost_found, profile, vehicle_document` (profile = images ≤5MB; docs = images+pdf/doc ≤10–15MB). Signed `PUT /api/v1/uploads/:key` (route-level `express.raw`, no Bearer needed — auth is the signature) verifies signature + expiry (409/401 on bad/expired), stores bytes to a local storage dir (`UPLOAD_DIR` or OS temp), returns `{ stored, key, bytes }`. `POST /api/v1/uploads/confirm { key }` (auth) checks the object exists and returns `{ accepted, key }` for the client to attach to a parent record. No S3/AWS SDK or S3 env exists in this repo, so uploads are stored locally via a config-driven backend (real S3 presigning can be swapped in via `UPLOAD_SIGNING_SECRET`/bucket env later). Test `tests/phase2-uploads.test.ts` (6 tests): disallowed content-type 400, oversize 400, valid presign returns key+url, PUT stores then confirm accepts, unknown purpose 400, unauthenticated presign 401. 6/6 passing; `tsc --noEmit` clean.
 
 ---
 

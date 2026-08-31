@@ -13,15 +13,24 @@ export const redisOptions = {
   lazyConnect: true,
 } as const;
 
-const redisClient = new Redis(redisOptions);
+export const createRedisClient = (name = "default"): Redis => {
+  const client = new Redis({
+    ...redisOptions,
+    connectionName: name,
+  });
 
-redisClient.on("connect", () => {
-  logger.info("Redis connected");
-});
+  client.on("connect", () => {
+    logger.info(`Redis ${name} connected`);
+  });
 
-redisClient.on("error", (err: Error) => {
-  logger.error(`Redis error: ${err.message}`);
-});
+  client.on("error", (err: Error) => {
+    logger.error(`Redis ${name} error: ${err.message}`);
+  });
+
+  return client;
+};
+
+const redisClient = createRedisClient("main");
 
 export default redisClient;
 export type RedisOptions = typeof redisOptions;
