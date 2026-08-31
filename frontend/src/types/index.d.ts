@@ -1,22 +1,35 @@
+/**
+ * Backend response envelope (as-built).
+ * Success: { success, message, data? }
+ * Error:   { error: { code, message, details?, traceId } }  -> thrown as ApiError
+ */
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
 }
 
-export interface JwtPayload {
-  id: string;
-  role: string;
+export interface ApiErrorShape {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+  traceId?: string;
+}
+
+export interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  pages?: number;
 }
 
 export interface AuthUser {
-  id: string;
+  _id: string;
+  name: string;
+  email: string;
   role: string;
-}
-
-export interface Paginated<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
+  phone?: string | null;
+  language?: string;
+  avatarKey?: string | null;
+  isActive?: boolean;
 }
