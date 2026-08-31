@@ -23,11 +23,11 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 
 | Phase | Tasks | Developed | Tested | Done |
 |-------|-------|-----------|--------|------|
-| 3 — Real-Time Engine | P2-01 … P2-28 | 28 / 28 | 26 / 28 | 22 / 28 |
+| 3 — Real-Time Engine | P2-01 … P2-28 | 28 / 28 | 27 / 28 | 23 / 28 |
 | 7 — Production (real-time) | P2-29 … P2-31 | 3 / 3 | 3 / 3 | 2 / 3 |
-| **Total** | **31** | **31 / 31** | **29 / 31** | **24 / 31** |
+| **Total** | **31** | **31 / 31** | **30 / 31** | **25 / 31** |
 
-> P2-01/P2-02 (Socket.IO server + auth/rooms) were already developed before this pass and are unchanged here — still awaiting their own test pass. Everything else (P2-03 → P2-31) was implemented and tested in this pass; see per-task notes below for the handful still partial (P2-10, P2-24, P2-25, P2-27, P2-31), each blocked on a Person 1 deliverable that doesn't exist yet or on a formal load test.
+> P2-01 (tracking service/worker setup) was already developed before this pass and is unchanged here — still awaiting its own test pass. **P2-02 is now `✅ Done`** (2026-08-31): added the missing `stop:{id}` room (spec called for `route:{id}` / `stop:{id}`, only `vehicle`/`route`/`trip`/`fleet:all` existed) + `broadcastToStop`, and added `tests/phase3-socket.test.ts` covering handshake auth (valid/guest/bad token), room joins incl. the new `stop:{id}` room, `fleet:all` gating, and cross-instance-style room-scoped broadcast delivery. Everything else (P2-03 → P2-31) was implemented and tested in an earlier pass; see per-task notes below for the handful still partial (P2-10, P2-24, P2-25, P2-27, P2-31), each blocked on a Person 1 deliverable that doesn't exist yet or on a formal load test.
 
 ---
 
@@ -44,12 +44,13 @@ Test: worker + tracking routes boot; Mongo + Redis reachable; `@turf` imports re
 
 ### P2-02 — Socket.IO server + auth handshake + rooms + Redis adapter
 - [x] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🧪 Tested
+- [x] ✅ Done
 
-Scope: Socket.IO server, handshake auth with the access token (guest token accepted **read-only**), rooms `vehicle:{id}`, `route:{id}`, `trip:{id}`, `fleet:all`, subscribe/unsubscribe, reconnection handling, Redis adapter for horizontal scaling.
+Scope: Socket.IO server, handshake auth with the access token (guest token accepted **read-only**), rooms `vehicle:{id}`, `route:{id}`, `trip:{id}`, `stop:{id}`, `fleet:all`, subscribe/unsubscribe, reconnection handling, Redis adapter for horizontal scaling.
 🔗 Depends on: **P1-08** (access-token issuance + JWT verify secret/claims), **P1-12** (guest token + read-only scope), **P1-15** (role claims for `fleet:all` gating).
-Test: valid token joins a room; guest joining `vehicle:`/`route:`/`trip:` is read-only and rejected from `fleet:all`; bad token → connection refused; two server instances share broadcasts via the adapter.
+Test: valid token joins a room; guest joining `vehicle:`/`route:`/`trip:`/`stop:` is read-only and rejected from `fleet:all`; bad token → connection refused; two server instances share broadcasts via the adapter.
+> **Note (2026-08-31):** `stop:{id}` room was missing from the implementation even though this scope line and **P1-38**'s dependency on it both call for it — added `subscribe`/`unsubscribe` handling + `broadcastToStop` in `src/config/socket.ts`. Test coverage added in `tests/phase3-socket.test.ts`: token/guest/bad-token handshake, all five room joins, `fleet:all` admin gating, and room-scoped broadcast delivery (in-room receives, outsider doesn't) for both `route:{id}` and the new `stop:{id}`. The Redis-adapter "two server instances share broadcasts" case is exercised implicitly (the adapter is wired for every broadcast in these tests) but not with two literal server processes — would need a second `httpServer`/`initSocket` pair against the same Redis to prove cross-instance fan-out explicitly.
 
 ### P2-03 — Redis real-time state schema + cold-start rebuild
 - [x] 🔨 Developed
@@ -242,7 +243,7 @@ Test: each event published on its channel with the agreed schema; Person 1 test 
 - [x] 🔨 Developed
 - [x] 🧪 Tested
 - [ ] ✅ Done
-> **Note:** location/ETA/current-stop/delay/status/arrival/occupancy all stream to the passenger room. Service-alert relay not wired — Person 1's `service:alert` emission (P1-38) doesn't exist yet to relay.
+> **Note:** location/ETA/current-stop/delay/status/arrival/occupancy all stream to the passenger room. Service-alert relay still not wired here. **Update (2026-08-31):** P1-38 is now `✅ Done` and emits `service:alert` directly into `route:{id}`/`stop:{id}` rooms (`serviceAlert.service.ts::emitToRooms`) — the blocker for *having something to relay* is gone, but this task's own passenger-room relay code hasn't been written.
 
 Scope: passenger room receives vehicle location · ETA · current stop · next stop · delay · vehicle status · arrival/departure · occupancy · service alerts. WebSockets only. Flow: `Driver GPS → Backend → Redis → Socket.IO → Passenger`.
 🔗 Depends on: **P1-38** (Service Alerts publishes `service:alert` into route/stop rooms — Person 2 relays alongside tracking data). Guest read-only rooms via **P1-12**.
@@ -325,6 +326,6 @@ Test: sustained target GPS RPS with p95 within budget; WS spike handled; spoofin
 - [x] Person 2 → Person 1 event names + payloads agreed for all 10 §55 events (channel, schema, `traceId`). — `event-bus.service.ts` publishes all 10 with typed payloads + `traceId`, now backed by a durable BullMQ redelivery layer (Pub/Sub alone gives no delivery guarantee).
 - [x] `Idempotency-Key` enforced on `tracking/location/bulk` (backed by Person 1's `idempotencyKeys` collection, **P1-04**). — wired via `idempotencyRequired` + `idempotent` middleware; tested (missing key → 400, replay → identical response, reused key + different body → 409).
 - [x] Standard error envelope `{ error: { code, message, details?, traceId } }` used on all `/tracking/*` responses. — all handlers throw `AppError`, caught by the shared `errorHandler`; verified via 400/403/404/409 test cases.
-- [ ] Socket.IO handshake auth accepts Person 1's access token + guest token (read-only); Redis adapter enabled for scale-out. — implemented under P2-02 (unchanged this pass); no socket-client test added here to re-verify it.
+- [x] Socket.IO handshake auth accepts Person 1's access token + guest token (read-only); Redis adapter enabled for scale-out. — verified in `tests/phase3-socket.test.ts` (2026-08-31): valid access token and guest token both connect and join rooms read-only; missing/invalid token is rejected; Redis adapter (`@socket.io/redis-adapter`) is wired in `initSocket` and exercised by every broadcast-delivery test here.
 - [x] Trip `PAUSED` → real-time status `ON_BREAK` (not `OFFLINE`); GPS broadcast suspended/reduced while paused. — was a dead import (`setDriverOnBreak` never called); now hooked into `trip.service.ts#transitionTrip` on `PAUSED`/resume-`ACTIVE`, and `offline-detection.service.ts` already exempts `PAUSED` trips from the offline sweep. Tested end-to-end.
 - [x] `TRIP_STATS_READY` is the single handoff for trip summary; Person 1 does not compute stats. — `transitionTrip` enqueues `tripStatsQueue` on `COMPLETED`; the worker computes real distance/moving/idle/per-stop-delay/on-time% stats and publishes `TRIP_STATS_READY`. Verified via test + a manual worker smoke test (GPS point → Mongo, occupancy job → Redis).

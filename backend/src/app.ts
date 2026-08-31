@@ -32,6 +32,7 @@ import uploadRoutes from "./modules/uploads/uploads.routes.js";
 import trackingRoutes from "./modules/tracking/tracking.routes.js";
 import gtfsRealtimeRoutes from "./modules/tracking/gtfs/gtfs-rt.routes.js";
 import notificationRoutes from "./modules/notification/notification.routes.js";
+import { adminServiceAlertRouter, publicServiceAlertRouter } from "./modules/serviceAlert/serviceAlert.routes.js";
 
 dotenv.config();
 
@@ -87,6 +88,7 @@ app.use("/api/v1/admin/stops", adminStopRouter);
 app.use("/api/v1/admin/routes", adminRouteRouter);
 app.use("/api/v1/admin/schedules", adminScheduleRouter);
 app.use("/api/v1/admin/trips", adminTripRouter);
+app.use("/api/v1/admin/service-alerts", adminServiceAlertRouter);
 app.use("/api/v1/admin/assignment-requests", adminRequestRouter);
 app.use("/api/v1/me", meRouter);
 app.use("/api/v1/sync", syncRoutes);
@@ -100,6 +102,7 @@ app.use("/api/v1/stops", publicStopRouter);
 app.use("/api/v1/tracking", trackingRoutes);
 app.use("/api/v1/gtfs/realtime", gtfsRealtimeRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/service-alerts", publicServiceAlertRouter);
 
 // OpenAPI spec + mock server (P1-18)
 app.use("/api-docs", specRouter());

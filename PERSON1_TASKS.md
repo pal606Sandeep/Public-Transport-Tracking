@@ -25,11 +25,11 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 |-------|-------|-----------|--------|------|
 | 1 — Foundation            | P1-01 … P1-18 | 18 / 18 | 18 / 18 | 18 / 18 |
 | 2 — Transport Management  | P1-19 … P1-32 | 12 / 14 | 12 / 14 | 12 / 14 |
-| 4 — Passenger Operations  | P1-33 … P1-40 | 0 / 8  | 0 / 8  | 0 / 8  |
+| 4 — Passenger Operations  | P1-33 … P1-40 | 1 / 8  | 1 / 8  | 1 / 8  |
 | 5 — Ticketing & Payments  | P1-41 … P1-47 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 6 — Admin Operations      | P1-48 … P1-54 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 7 — Production            | P1-55 … P1-58 | 0 / 4  | 0 / 4  | 0 / 4  |
-| **Total** | **58** | **30 / 58** | **30 / 58** | **30 / 58** |
+| **Total** | **58** | **31 / 58** | **31 / 58** | **31 / 58** |
 
 > **Backend review — 2026-08-29.** Phase 1 Foundation complete; Phase 2 Transport Management **begun** — P1-19 (User Management) and P1-20 (Passenger Management) `✅ Done`. Full vitest suite green: 6 Phase-1 files + `tests/phase2-users.test.ts` (10) + `tests/phase2-passengers.test.ts` (8) = **66 passing**; `tsc --noEmit` clean.
 > - **Developed + Tested + Done:** P1-01 … P1-20 (20/20 across Phases 1–2).
@@ -372,13 +372,14 @@ Scope: subscribe (Redis Pub/Sub / event bus) to `BUS_APPROACHING, BUS_ARRIVED, B
 Test: simulated `BUS_DELAYED` event notifies route subscribers only; SOS routes to dispatchers; dedupe on repeated event.
 
 ### P1-38 — Service Alerts & Announcements
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: CRUD `/api/v1/admin/service-alerts` (title, message, severity, type `disruption|closure|weather|emergency|general`, targeting `routeIds[] | stopIds[] | geoArea | all`, `startsAt`, `endsAt`, status). `GET /api/v1/service-alerts?routeId=&stopId=` public read. On publish → fan out via Notification Service + Socket.IO `service:alert` to relevant rooms.
 🔗 Depends on: **P2-02** (Socket.IO server + `route:{id}` / `stop:{id}` rooms + Redis adapter) to emit `service:alert`; **P2-24** relays it into the passenger stream. CRUD + public read + Notification-Service fan-out have no dependency — build those first; add the socket emit once P2-02 is `✅ Done`.
 Test: geo-area targeting selects correct routes; publish triggers notifications + socket emit; expired alert excluded from public read.
+> **Note (2026-08-31):** Built `src/modules/serviceAlert/*` (model/validation/service/controller/routes), mounted at `/api/v1/admin/service-alerts` (admin CRUD + `/publish` + `/cancel`) and `/api/v1/service-alerts` (public read, `guestOrAuth` like route/stop). Targeting is a discriminated union (`routes` | `stops` | `geoArea` | `all`); `geoArea` resolves via Mongo `$geoWithin` against `Stop.location` (2dsphere), then routes serving those stops — denormalized onto `resolvedRouteIds`/`resolvedStopIds` at create/update/publish so public reads don't re-run the geo query. `emitToRooms()` in `serviceAlert.service.ts` is wired for real (no longer a no-op) against P2-02's `broadcastToRoute`/`broadcastToStop`/`broadcastToAll`, now that P2-02 is `✅ Done` with the `stop:{id}` room added. **Gap:** the "fan out via Notification Service" half of this scope line is not wired — `notification.service.ts` (P1-36) is still a stub (`createNotification` etc. all return `null`), so there's nothing real to call yet; wire it in when P1-36 lands. **Also not done:** P2-24's passenger-room relay of `service:alert` (Person 2's task, noted there). Tests: `tests/phase4-service-alerts.test.ts` (13 cases) — RBAC on admin routes, routes/stops/geoArea/all targeting incl. `resolvedRouteIds`/`resolvedStopIds`, reject-unknown-target-id validation, draft excluded from public read, publish emits `service:alert` to a subscribed socket in the target room (verified via `tests/phase3-socket.test.ts`'s live server), route-id/stop-id filtering on public read, expired-alert exclusion, double-publish conflict, cancel, soft-delete.
 
 ### P1-39 — Complaint Management
 - [ ] 🔨 Developed
