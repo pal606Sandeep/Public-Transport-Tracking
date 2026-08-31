@@ -120,3 +120,23 @@ export const trackingQueues = [
 export async function closeTrackingQueues(): Promise<void> {
   await Promise.all(trackingQueues.map((q) => q.close()));
 }
+
+/**
+ * P2-15 / P2-28 / P2-30 — schedule BullMQ's native repeatable jobs so the
+ * offline/stale sweep and GPS-history archival run on a cadence without a
+ * separate cron dependency. Safe to call on every worker boot: BullMQ
+ * dedupes repeatable jobs by their repeat key.
+ */
+export async function scheduleRepeatableJobs(): Promise<void> {
+  await offlineDetectionQueue.add(
+    "sweep",
+    {},
+    { repeat: { every: 15_000 }, jobId: "offline-sweep-repeat", removeOnComplete: true, removeOnFail: true }
+  );
+
+  await historicalDataQueue.add(
+    "archive-old-gps",
+    {},
+    { repeat: { every: 24 * 60 * 60 * 1000 }, jobId: "gps-archive-repeat", removeOnComplete: true, removeOnFail: true }
+  );
+}

@@ -5,6 +5,9 @@ import { Driver } from "../driver/driver.model.js";
 import { Conductor } from "../conductor/conductor.model.js";
 import { AuditLog } from "../../models/auditLog.model.js";
 import { AppError } from "../../utils/AppError.js";
+import { tripStatsQueue } from "../tracking/queues/tracking.queues.js";
+import { setDriverOnBreak, setDriverOnTrip } from "../tracking/geo/driver-status.service.js";
+import { updateVehicleStatus } from "../tracking/tracking.service.js";
 
 const actor = (a?: { id?: string; role?: string }) => ({ actorId: a?.id ?? null, actorRole: a?.role ?? null });
 
@@ -204,6 +207,38 @@ export const transitionTrip = async (
       resourceId: id,
       severity: "WARN",
     });
+
+    // Contract checkpoint: trip PAUSED -> real-time status ON_BREAK (not
+    // OFFLINE — offline-detection.service.ts already exempts PAUSED trips
+    // from the offline sweep); resuming to ACTIVE flips it back to ON_TRIP.
+    const driverId = out.driver as string | null;
+    const vehicleId = out.vehicle as string | null;
+    if (driverId && vehicleId) {
+      if (target === "PAUSED") {
+        await setDriverOnBreak(driverId, vehicleId, id).catch(() => undefined);
+        await updateVehicleStatus(vehicleId, "ON_BREAK", { tripId: id, driverId }).catch(() => undefined);
+      } else if (target === "ACTIVE") {
+        await setDriverOnTrip(driverId, vehicleId, id, out.route as string).catch(() => undefined);
+        await updateVehicleStatus(vehicleId, "ON_TRIP", { tripId: id, driverId }).catch(() => undefined);
+      }
+    }
+
+    // P2-21 — trip end (including admin force-end via transition) hands off
+    // statistics computation to the tracking engine; it responds with
+    // TRIP_STATS_READY on the event bus once done. Trip service does not
+    // compute stats itself.
+    if (target === "COMPLETED") {
+      await tripStatsQueue.add("compute-stats", { tripId: id }).catch((err: Error) => {
+        AuditLog.create({
+          action: "trip.stats_enqueue_failed",
+          resource: "trip",
+          resourceId: id,
+          meta: { error: err.message },
+          severity: "WARN",
+        }).catch(() => undefined);
+      });
+    }
+
     return out;
   } finally {
     await session.endSession();

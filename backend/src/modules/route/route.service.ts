@@ -3,6 +3,7 @@ import { Route, IRoute } from "./route.model.js";
 import { AuditLog } from "../../models/auditLog.model.js";
 import { AppError } from "../../utils/AppError.js";
 import { Stop } from "../stop/stop.model.js";
+import { invalidateRouteCache } from "../tracking/geo/geospatial.service.js";
 
 export type StopEntryInput = { stopId: string; sequence: number; scheduledOffsetMinutes: number };
 
@@ -115,6 +116,7 @@ export const updateRoute = async (id: string, input: RouteUpdate, a?: { id?: str
   if (input.status !== undefined) doc.status = input.status;
 
   await doc.save();
+  invalidateRouteCache(id);
 
   await AuditLog.create({
     ...actor(a),
@@ -133,6 +135,7 @@ export const setRouteStatus = async (id: string, status: IRoute["status"], a?: {
   if (!doc || doc.deletedAt) throw AppError.notFound("Route not found", "ROUTE_NOT_FOUND");
   doc.status = status;
   await doc.save();
+  invalidateRouteCache(id);
   await AuditLog.create({
     ...actor(a),
     action: `route.${status === "ACTIVE" ? "activate" : "deactivate"}`,
@@ -174,6 +177,7 @@ export const addRouteStop = async (
   doc.orderedStops = normalized.map((s) => ({ stopId: new Types.ObjectId(s.stopId), sequence: s.sequence, scheduledOffsetMinutes: s.scheduledOffsetMinutes })) as never;
   doc.stops = normalized.map((s) => new Types.ObjectId(s.stopId));
   await doc.save();
+  invalidateRouteCache(id);
 
   await AuditLog.create({
     ...actor(a),
@@ -198,6 +202,7 @@ export const removeRouteStop = async (id: string, stopId: string, a?: { id?: str
   doc.orderedStops = normalized.map((s) => ({ stopId: new Types.ObjectId(s.stopId), sequence: s.sequence, scheduledOffsetMinutes: s.scheduledOffsetMinutes })) as never;
   doc.stops = normalized.map((s) => new Types.ObjectId(s.stopId));
   await doc.save();
+  invalidateRouteCache(id);
 
   await AuditLog.create({
     ...actor(a),
@@ -232,6 +237,7 @@ export const reorderRouteStops = async (
   doc.orderedStops = normalized.map((s) => ({ stopId: new Types.ObjectId(s.stopId), sequence: s.sequence, scheduledOffsetMinutes: s.scheduledOffsetMinutes })) as never;
   doc.stops = normalized.map((s) => new Types.ObjectId(s.stopId));
   await doc.save();
+  invalidateRouteCache(id);
 
   await AuditLog.create({
     ...actor(a),
@@ -249,6 +255,7 @@ export const removeRoute = async (id: string, a?: { id?: string; role?: string }
   if (!doc || doc.deletedAt) throw AppError.notFound("Route not found", "ROUTE_NOT_FOUND");
   doc.deletedAt = new Date();
   await doc.save();
+  invalidateRouteCache(id);
   await AuditLog.create({
     ...actor(a),
     action: "route.delete",

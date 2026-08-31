@@ -29,11 +29,13 @@ export const REDIS_KEYS = {
 
 export const STATE_TTL = {
   location: 300,
-  status: 300,
+  // See tracking.service.ts STATUS_TTL — must outlive the offline-detection
+  // sweep's timeout window.
+  status: 1800,
   eta: 300,
   occupancy: 300,
   trip: 600,
-  driver: 600,
+  driver: 1800,
   routeVehicles: 600,
 } as const;
 

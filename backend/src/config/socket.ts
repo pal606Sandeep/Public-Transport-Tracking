@@ -51,12 +51,13 @@ export const initSocket = (httpServer: http.Server): SocketIOServer => {
   return io;
 };
 
-export const getIO = (): SocketIOServer => {
-  if (!io) {
-    throw new Error("Socket.IO not initialized. Call initSocket() first.");
-  }
-  return io;
-};
+/**
+ * Nullable by design: every call site chains with `getIO()?.to(...)`
+ * because tracking logic can run in contexts where a socket server was
+ * never started (tests, the worker process, request handling that races
+ * server startup) — broadcasting is best-effort there, not fatal.
+ */
+export const getIO = (): SocketIOServer | null => io;
 
 const socketAuthMiddleware = (socket: AuthenticatedSocket, next: (err?: Error) => void) => {
   const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(" ")[1];
