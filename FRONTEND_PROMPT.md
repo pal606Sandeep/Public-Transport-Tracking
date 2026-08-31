@@ -1,5 +1,11 @@
 # Real-Time Public Transport Tracking System — Frontend Development Prompt (Final)
 
+> **⚠️ This combined file has been split for coding. Use these instead:**
+> - **`PWA_PROMPT.md`** — the PWA app (`frontend/` folder): Passenger + Guest + Driver + Conductor
+> - **`ADMIN_PROMPT.md`** — the Admin dashboard (`admin/` folder): staff web dashboard, online-only
+>
+> This file is kept only as the combined overview / rationale. The two split files are self-contained and are the source of truth when implementing.
+
 > **Revision notes for this version**
 > - There are **two separate frontends**, each in its **own folder**, built and deployed independently:
 >   1. **`apps/pwa`** — the **Progressive Web App**: Passenger (+ Guest) and Operations (Driver, Conductor). Installable, offline-capable, Web Push, mobile-first.
