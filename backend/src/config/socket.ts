@@ -27,6 +27,7 @@ export interface RoomSubscription {
   vehicle?: string;
   route?: string;
   trip?: string;
+  stop?: string;
   fleetAll?: boolean;
 }
 
@@ -109,11 +110,11 @@ const handleConnection = (socket: AuthenticatedSocket) => {
 
   userRooms.set(socket.id, {});
 
-  socket.on("subscribe", (data: { vehicleId?: string; routeId?: string; tripId?: string; fleetAll?: boolean }, callback) => {
+  socket.on("subscribe", (data: { vehicleId?: string; routeId?: string; tripId?: string; stopId?: string; fleetAll?: boolean }, callback) => {
     handleSubscribe(socket, data, callback);
   });
 
-  socket.on("unsubscribe", (data: { vehicleId?: string; routeId?: string; tripId?: string; fleetAll?: boolean }, callback) => {
+  socket.on("unsubscribe", (data: { vehicleId?: string; routeId?: string; tripId?: string; stopId?: string; fleetAll?: boolean }, callback) => {
     handleUnsubscribe(socket, data, callback);
   });
 
@@ -126,7 +127,7 @@ const handleConnection = (socket: AuthenticatedSocket) => {
   });
 };
 
-const handleSubscribe = (socket: AuthenticatedSocket, data: { vehicleId?: string; routeId?: string; tripId?: string; fleetAll?: boolean }, callback?: (response: { success: boolean; message?: string; error?: string }) => void) => {
+const handleSubscribe = (socket: AuthenticatedSocket, data: { vehicleId?: string; routeId?: string; tripId?: string; stopId?: string; fleetAll?: boolean }, callback?: (response: { success: boolean; message?: string; error?: string }) => void) => {
   const { user } = socket;
   const subscriptions = userRooms.get(socket.id) || {};
   const responses: string[] = [];
@@ -155,6 +156,14 @@ const handleSubscribe = (socket: AuthenticatedSocket, data: { vehicleId?: string
     logger.debug("Socket joined trip room", { socketId: socket.id, room, userId: user?.id });
   }
 
+  if (data.stopId) {
+    const room = `stop:${data.stopId}`;
+    socket.join(room);
+    subscriptions.stop = data.stopId;
+    responses.push(`joined ${room}`);
+    logger.debug("Socket joined stop room", { socketId: socket.id, room, userId: user?.id });
+  }
+
   if (data.fleetAll) {
     if (user?.scope === "guest" || (!isAdminRole(user?.role) && !hasFleetPermission(user?.permissions))) {
       const msg = "Access denied: fleet:all requires admin role";
@@ -173,7 +182,7 @@ const handleSubscribe = (socket: AuthenticatedSocket, data: { vehicleId?: string
   callback?.({ success: true, message: responses.join(", ") });
 };
 
-const handleUnsubscribe = (socket: AuthenticatedSocket, data: { vehicleId?: string; routeId?: string; tripId?: string; fleetAll?: boolean }, callback?: (response: { success: boolean; message?: string }) => void) => {
+const handleUnsubscribe = (socket: AuthenticatedSocket, data: { vehicleId?: string; routeId?: string; tripId?: string; stopId?: string; fleetAll?: boolean }, callback?: (response: { success: boolean; message?: string }) => void) => {
   const subscriptions = userRooms.get(socket.id) || {};
 
   if (data.vehicleId) {
@@ -195,6 +204,13 @@ const handleUnsubscribe = (socket: AuthenticatedSocket, data: { vehicleId?: stri
     socket.leave(room);
     delete subscriptions.trip;
     logger.debug("Socket left trip room", { socketId: socket.id, room });
+  }
+
+  if (data.stopId) {
+    const room = `stop:${data.stopId}`;
+    socket.leave(room);
+    delete subscriptions.stop;
+    logger.debug("Socket left stop room", { socketId: socket.id, room });
   }
 
   if (data.fleetAll) {
@@ -224,6 +240,10 @@ export const broadcastToRoute = (routeId: string, event: string, data: unknown) 
 
 export const broadcastToTrip = (tripId: string, event: string, data: unknown) => {
   io?.to(`trip:${tripId}`).emit(event, data);
+};
+
+export const broadcastToStop = (stopId: string, event: string, data: unknown) => {
+  io?.to(`stop:${stopId}`).emit(event, data);
 };
 
 export const broadcastToFleetAll = (event: string, data: unknown) => {
