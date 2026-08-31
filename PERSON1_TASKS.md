@@ -24,12 +24,12 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 | Phase | Tasks | Developed | Tested | Done |
 |-------|-------|-----------|--------|------|
 | 1 — Foundation            | P1-01 … P1-18 | 18 / 18 | 18 / 18 | 18 / 18 |
-| 2 — Transport Management  | P1-19 … P1-32 | 12 / 14 | 12 / 14 | 12 / 14 |
-| 4 — Passenger Operations  | P1-33 … P1-40 | 1 / 8  | 1 / 8  | 1 / 8  |
+| 2 — Transport Management  | P1-19 … P1-32 | 14 / 14 | 14 / 14 | 14 / 14 |
+| 4 — Passenger Operations  | P1-33 … P1-40 | 8 / 8  | 8 / 8  | 8 / 8  |
 | 5 — Ticketing & Payments  | P1-41 … P1-47 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 6 — Admin Operations      | P1-48 … P1-54 | 0 / 7  | 0 / 7  | 0 / 7  |
 | 7 — Production            | P1-55 … P1-58 | 0 / 4  | 0 / 4  | 0 / 4  |
-| **Total** | **58** | **31 / 58** | **31 / 58** | **31 / 58** |
+| **Total** | **58** | **40 / 58** | **40 / 58** | **40 / 58** |
 
 > **Backend review — 2026-08-29.** Phase 1 Foundation complete; Phase 2 Transport Management **begun** — P1-19 (User Management) and P1-20 (Passenger Management) `✅ Done`. Full vitest suite green: 6 Phase-1 files + `tests/phase2-users.test.ts` (10) + `tests/phase2-passengers.test.ts` (8) = **66 passing**; `tsc --noEmit` clean.
 > - **Developed + Tested + Done:** P1-01 … P1-20 (20/20 across Phases 1–2).
@@ -37,6 +37,24 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 > - Remaining Phase 2 (P1-21 … P1-32): not started.
 
 > **Backend review — 2026-08-31.** Phase 2 Transport Management **advanced to 12/14 done**. Newly completed this pass **without** cross-person dependencies (per approved plan): **P1-21** Driver Management (7/7, perf stub pending P2-21/P2-13), **P1-22** Conductor Management (7/7), **P1-23** Vehicle Management (7/7), **P1-25** Stop Management (6/6), **P1-24** Route + route-stop Management (7/7), **P1-26** Schedule Management + trip materialisation (6/6), **P1-27** Trip Management lifecycle (9/9), **P1-30** My Assignment & Attendance (6/6), **P1-31** Reference-Data Sync (5/5), **P1-32** File Uploads presign (6/6). New module+test files: `driver/conductor/vehicle/stop/route/schedule/trip/me/sync/uploads`. Routers added in `app.ts` (`/admin/vehicles|stops|routes|schedules|trips|assignment-requests`, `/me`, `/sync`, `/uploads`). `tsc --noEmit` clean. **⛔ STOP point reached:** remaining Phase-2 tasks **P1-28** (active-trip recovery) and **P1-29** (trip start + force-end) genuinely depend on Person 2 deliverables **P2-21** (trip statistics) / **P2-19** (real-time trip events) — not delivered (P2 tracker 0/31) — so this pass stops here per the dependency-stop rule. All Phase-2 tests passing (66 Phase-1 + Phase-2 suite); `npx vitest run` green, `tsc --noEmit` clean.
+
+> **Backend review — 2026-08-31 (dependency unblocked).** Person 2 **P2-21** (trip statistics / `TRIP_STATS_READY`) is now `✅ Done` on the Person 2 tracker, unblocking the final two Phase-2 tasks. **P1-28** and **P1-29** completed this pass — Phase 2 now **14/14 done**.
+> - **P1-28** — `GET /api/v1/me/active-trip` (staff-only) returns the open `ACTIVE`/`PAUSED` trip with resume state (route geometry + ordered stops + offsets + stop names/codes, `startedAt`, `currentStop`, `lastKnownPosition`, checklist). `PATCH /api/v1/trips/:id { action: "pause"|"resume"|"end" }` + `/:id/resume` + `/:id/end` aliases, all behind a mandatory `Idempotency-Key` (`idempotencyRequired` + `idempotent`) so a repeated key replays the stored response. `PAUSED` sets driver `ON_BREAK` + vehicle `ON_BREAK` (not `OFFLINE` — `offline-detection` already exempts paused trips); resume flips back to `ON_TRIP`.
+> - **P1-29** — `POST /api/v1/trips/:id/start` (staff, `Idempotency-Key`) starts an assigned `SCHEDULED`/`ASSIGNED` trip → 409 if unassigned, 409 `CHECKLIST_BLOCKED` when `checklistBlocksTripStart` is on and a checklist item is `false`. `POST /api/v1/admin/trips/:id/force-end` (behind `authorize("MANAGE","trip")`) → non-privileged caller 403. `POST /api/v1/trips/:id/checklist` (fuel/tyres/brakes/lights/documentsValid/cleanliness).
+> - **Trip-summary store (the P2-21 dependency):** `modules/tracking/trip-stats.consumer.ts` subscribes to `TRIP_STATS_READY` and writes the full summary onto `Trip.summary` (distance, moving/idle time, stops served, per-stop actual-vs-scheduled, on-time %, delay, avg/max speed, downsampled path, `readyAt`). Started from `index.ts` via `startTripStatsConsumer()`. The `end`/`force-end`/`transition→COMPLETED` paths enqueue `tripStatsQueue` → Person 2's `computeTripStatistics` → `TRIP_STATS_READY` → this consumer. The empty-summary stub is removed.
+> - New test `tests/phase2-trips-p1-28-p1-29.test.ts` (11 tests): passenger 403, no-active-trip 404, start→recover, pause→resume, end→summary+404, repeated `Idempotency-Key` no-op, double-start idempotent, start-without-assignment 409, force-end non-dispatcher 403, force-end by privileged 200, checklist blocks start only when flag on. Full suite **176/176 green** across 20 files; `tsc --noEmit` clean.
+
+> **Backend review — 2026-08-31 (Phase 4 — Passenger Operations).** Phase 4 **8/8 done**. Every Phase-4 Person-2 dependency was checked against the Person 2 tracker first: **P2-12** (ETA engine) and **P2-23** (event bus) are `✅ Done` so P1-34 and P1-37 were built in full. **P1-38** had already been built and socket-wired on the `dev-shubh` branch (P2-02 Socket.IO rooms landed there); on rebase that implementation was kept and my parallel P1-38 module was dropped. The one gap dev-shubh flagged — "fan out via Notification Service" — is now closed: with P1-36 real, `serviceAlert.service.ts` publish/create paths call `dispatchNotification` for route/stop subscribers alongside the existing `emitToRooms` socket broadcast.
+> - **P1-33** — new `discovery` module. `GET /api/v1/discovery/routes?q=`, `/discovery/stops?q=` or `?lat=&lng=&radius=` (geoNear), `/discovery/find-bus?from=<stopId>&to=<stopId>` (routes serving both stops in sequence order, with board/alight stop, intermediate count, scheduled duration). Route/stop detail reuse the existing public `GET /routes/:id` & `/stops/:id`. Guest tokens allowed.
+> - **P1-34** — `GET /api/v1/journeys?from=&to=&time=&maxTransfers=` (`from`/`to` = stopId or `lat,lng`). Ranked options (0-transfer first, then duration, then fare): walk + ride legs, transfer points, walking distance to first stop, per-leg + total fare (`fareRules` SystemSetting or default base 10 + 2/stop), per-leg `nextDeparture` from `Schedule.departureTimes`, per-leg `liveEtaSeconds` read from Redis `vehicle:{id}:eta` when a trip is ACTIVE on the route (best-effort; falls back to `null`/scheduled). **Contract note for Person 2:** the planner reads `vehicle:{id}:eta` as JSON `{ stops: { [stopId]: { etaSeconds } }, etaSeconds }` — confirm this matches P2-12's actual key shape.
+> - **P1-35** — new `Subscription` model + `POST/GET/DELETE /api/v1/passengers/me/subscriptions`. Unique `(user,type,target)` index ⇒ dedupe (repeat POST → 200 with the existing row). Guests 403 via new shared `middlewares/denyGuest`. `getSubscriberUserIds(type,targetId)` exported for the notification fan-out.
+> - **P1-36** — `notification` module rebuilt from its 501 stubs. Models: `Notification` (channels, status sent/deferred, dedupeKey unique-partial index), `NotificationPreference` (per-channel toggles, `quietHours {start,end}`, `digest`, `mutedTypes`), `NotificationTemplate` (`{{var}}` render), `PushSubscription`. `dispatchNotification()` = resolve content (literal or template) → prefs → quiet-hours (defer external delivery, still store in-app; `urgent` bypasses) → store → fan out. Channel transports are a pluggable seam (`channels.ts` `setChannelSender`) since `web-push`/SMS/SMTP libs aren't installed; webpush 404/410 prunes the subscription. Endpoints: list/`:id`/`:id/read`/`read-all`, `preferences` GET/PUT, `push-subscriptions` POST/DELETE; admin `/api/v1/admin/notification-templates` CRUD + `/preview`.
+> - **P1-37** — `notification/event-consumer.ts` subscribes via `subscribeToEvent` (P2-23 bus) to `BUS_APPROACHING_STOP, BUS_ARRIVED_STOP, VEHICLE_DELAYED, VEHICLE_OFFLINE, ROUTE_DEVIATION, DRIVER_SOS`; resolves followers (route + stop subscribers) or ops staff (SOS), dedupes per `(user, eventType:traceId)`. `handleTrackingEvent()` exported for unit tests; `startNotificationConsumer()` wired into `index.ts`.
+> - **P1-38** — `serviceAlert` module from `dev-shubh` (admin CRUD `/api/v1/admin/service-alerts` + `/publish` `/cancel`, public `GET /api/v1/service-alerts?routeId=&stopId=`, targeting `routes|stops|geoArea|all` with `$geoWithin` resolution denormalised onto `resolvedRouteIds/StopIds`, `emitToRooms` broadcasting `service:alert` to `route:{id}`/`stop:{id}` rooms via P2-02). This pass added the Notification-Service fan-out to the publish path (`dispatchNotification` for subscribers of the resolved routes/stops, deduped per alert). Tests: `tests/phase4-service-alerts.test.ts` + `tests/phase3-socket.test.ts` (from dev-shubh) still green.
+> - **P1-39** — new `complaint` module. `POST/GET /api/v1/complaints` (+ `/:id`, `/:id/history`, `/:id/attachments`, `/:id/feedback`), admin `/api/v1/admin/complaints` (`/assign`, `PATCH`, `/escalate`, `/resolve`, `/close`). Status machine OPEN→IN_PROGRESS→ESCALATED→RESOLVED→CLOSED with guard, per-action `history[]` + AuditLog, escalation bumps level/priority/assignee, attachment keys from the presign flow, 1-5 feedback rating on resolved/closed. Guests 403.
+> - **P1-40** — new `lostFound` module. `POST/GET /api/v1/lost-found` (+ `/:id`), admin `/api/v1/admin/lost-found` (`/:id/matches?windowDays=`, `/assign`, `PATCH`, `/:id/confirm-return`, `/:id/close`). Matching = opposite kind, same route (if set), `occurredAt` within ±windowDays, ranked by time proximity + text overlap. `confirm-return` links both records (`matchedWith`), marks both RETURNED, writes a shared resolution + history. Guests 403.
+> - New test `tests/phase4-passenger-ops.test.ts` — 24 tests (the P1-38 block was dropped in favour of dev-shubh's `phase4-service-alerts.test.ts`). Also fixed `utils/validation.ts` `validate(..., "query")` for Express 5 (getter-only `req.query` — now `Object.defineProperty`'d). See the final review note for the merged suite count.
+> - **Contract note for Person 2 (P2-12):** the journey planner reads `vehicle:{id}:eta` as JSON `{ stops: { [stopId]: { etaSeconds } }, etaSeconds }` — confirm this matches P2-12's actual key shape.
 
 ---
 
@@ -281,18 +299,18 @@ Test: illegal transition → 409; cancel/miss recorded; summary stored; transact
 Review (2026-08-31): **Completed.** `modules/trip/*` — admin Trip lifecycle at `/api/v1/admin/trips` behind `authenticate + authorize("MANAGE","trip")`. Enhanced `trip.model.ts` (status enum, `schedule/route/vehicle/driver/conductor` refs, `scheduledStartAt/scheduledEndAt`, `startTime/endTime`, `cancelReason/cancelledAt`, position, summary, checklist). Lifecycle transition map (`SCHEDULED,ASSIGNED,ACTIVE,PAUSED,COMPLETED,CANCELLED,MISSED`) with valid-transition guard → illegal transition 409. Endpoints: list (status/route/driver/date filters), get, create (SCHEDULED), `/:id/assign` (transaction validates Driver/Vehicle/Conductor exist + syncs vehicle `assignedRoute/assignedDriver`), `/:id/transition`, `/:id/cancel` (reason), `/:id/miss`, `/:id/complete`, `/bulk-status`. Cross-collection writes run in a Mongo session transaction → partial failure rolls back (assignment to a non-existent vehicle 404 leaves trip unchanged). Trip summary storage is reserved for P1-28 (P2-21 stats) — not computed here. Test `tests/phase2-trips.test.ts` (9 tests): passenger 403, SCHEDULED create, full valid chain SCHEDULED→ASSIGNED→ACTIVE→PAUSED→ACTIVE→COMPLETED (+start/end times), illegal COMPLETED→ACTIVE→409, transaction rollback on bad assign, valid assign→ASSIGNED, cancel+reason, miss, bulk-status. 9/9 passing; `tsc --noEmit` clean.
 
 ### P1-28 — Trip: active-trip recovery + pause/resume/end
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/me/active-trip` returns open trip (`ACTIVE`/`PAUSED`) with resume state (tripId, route geometry + ordered stops + offsets, last known position, current/next stop, startedAt). `PATCH /api/v1/trips/:id { action: "pause"|"resume"|"end" }` — requires `Idempotency-Key`; on `end` store Person 2's trip statistics as the summary. While `PAUSED`, expose state so Person 2 sets `ON_BREAK` (not `OFFLINE`).
 🔗 Depends on: **P2-21** (trip statistics) — the `end` action's trip summary is stored from the `TRIP_STATS_READY` event; Person 1 does **not** compute stats. Two-way: Person 2 **P2-21** is triggered by this endpoint. Also **P2-03** consumes the `last known position` this endpoint returns. Build pause/resume/recovery first; the summary-store step waits on `TRIP_STATS_READY` (stub with an empty summary until then).
 Test: reload mid-trip → recover; pause then resume; repeated `Idempotency-Key` is a no-op; end stores stats when `TRIP_STATS_READY` received.
 
 ### P1-29 — Trip: start + force-end + pre-trip checklist
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/trips` (start, `Idempotency-Key`). `POST /api/v1/admin/trips/:id/force-end` (DISPATCHER; emits `trip:completed`, notifies operations). `POST /api/v1/trips/:id/checklist` (fuel, tyres, brakes, lights, documents-valid, cleanliness); System Setting `checklistBlocksTripStart` decides whether a failed item blocks start.
 🔗 Depends on: **P2-21 / P2-19** — on `force-end`, Person 2 finalises the GPS trail and emits `TRIP_STATS_READY`; store the resulting summary the same way as P1-28. Trip start makes the trip visible to Person 2's ingestion (**P2-04**).
@@ -330,42 +348,42 @@ Review (2026-08-31): **Completed.** `modules/uploads/*` — `POST /api/v1/upload
 # PHASE 4 — PASSENGER OPERATIONS
 
 ### P1-33 — Route / Stop search + find bus (source → destination)
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: search routes, search stops, find bus source→destination, view route details, view stop details. Text + geo search; pagination.
 Test: partial-name search; nearest-stop search; source→destination returns routes serving both stops in order.
 
 ### P1-34 — Journey Planner
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `GET /api/v1/journeys?from=<lat,lng|stopId>&to=<lat,lng|stopId>&time=<ts>` → ranked options: legs (walk/ride), transfer points, walking distance to first stop, per-leg + total fare, total duration, next departure per leg with live ETA where a trip is active.
 🔗 Depends on: **P2-12** (ETA engine — `vehicle:{id}:eta`) for the "live ETA where a trip is active" field only. Build the planner on schedule offsets first; read live ETA from Redis when P2-12 is available (fall back to scheduled offset otherwise).
 Test: direct route ranked above 1-transfer; fares sum correctly; live ETA populated when a trip is active, static offset otherwise.
 
 ### P1-35 — Favourite Subscriptions
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: `POST /api/v1/passengers/me/subscriptions { type: "route"|"stop", targetId }`, `GET`, `DELETE`. Feeds Notification Service for `BUS_DELAYED, ROUTE_DEVIATION, trip:cancelled`, service alerts on followed routes/stops.
 Test: create/list/delete; guest → 403; duplicate subscription deduped.
 
 ### P1-36 — Notification Service (core)
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: channels Web Push (VAPID), SMS, email, in-app. `notifications`, `notificationPreferences`, `notificationTemplates`. Templates, preferences (`quietHours { start, end }`, `digest` bool), history, read/unread, user settings. Web Push send via VAPID; `410` → delete subscription.
 Test: in-app notification stored + read toggle; quiet hours suppress/defer; expired push subscription pruned on 410; template renders with variables.
 
 ### P1-37 — Notification: consume Person 2 events + fan-out
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: subscribe (Redis Pub/Sub / event bus) to `BUS_APPROACHING, BUS_ARRIVED, BUS_DELAYED, VEHICLE_OFFLINE, ROUTE_DEVIATION, DRIVER_SOS` + Service Alerts; resolve target users (incl. favourite subscribers) and fan out on the right channels.
 🔗 Depends on: **P2-23** (event bus + payload schemas) is the source of every event consumed here; individual producers **P2-10** (approaching/arrived), **P2-13** (delayed), **P2-14** (deviation), **P2-15** (offline), **P2-17** (SOS). Develop the consumer + fan-out against a mocked publisher, then integrate once P2-23 is `✅ Done`.
@@ -382,17 +400,17 @@ Test: geo-area targeting selects correct routes; publish triggers notifications 
 > **Note (2026-08-31):** Built `src/modules/serviceAlert/*` (model/validation/service/controller/routes), mounted at `/api/v1/admin/service-alerts` (admin CRUD + `/publish` + `/cancel`) and `/api/v1/service-alerts` (public read, `guestOrAuth` like route/stop). Targeting is a discriminated union (`routes` | `stops` | `geoArea` | `all`); `geoArea` resolves via Mongo `$geoWithin` against `Stop.location` (2dsphere), then routes serving those stops — denormalized onto `resolvedRouteIds`/`resolvedStopIds` at create/update/publish so public reads don't re-run the geo query. `emitToRooms()` in `serviceAlert.service.ts` is wired for real (no longer a no-op) against P2-02's `broadcastToRoute`/`broadcastToStop`/`broadcastToAll`, now that P2-02 is `✅ Done` with the `stop:{id}` room added. **Gap:** the "fan out via Notification Service" half of this scope line is not wired — `notification.service.ts` (P1-36) is still a stub (`createNotification` etc. all return `null`), so there's nothing real to call yet; wire it in when P1-36 lands. **Update (2026-08-31):** P2-24 is now `✅ Done` too — it needed no separate relay code, since `emitToRooms()` already broadcasts into the same `route:{id}`/`stop:{id}` rooms passengers subscribe to. Tests: `tests/phase4-service-alerts.test.ts` (13 cases) — RBAC on admin routes, routes/stops/geoArea/all targeting incl. `resolvedRouteIds`/`resolvedStopIds`, reject-unknown-target-id validation, draft excluded from public read, publish emits `service:alert` to a subscribed socket in the target room (verified via `tests/phase3-socket.test.ts`'s live server), route-id/stop-id filtering on public read, expired-alert exclusion, double-publish conflict, cancel, soft-delete.
 
 ### P1-39 — Complaint Management
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: create, categories (`bus delay, driver behavior, conductor behavior, vehicle condition, cleanliness, overcrowding, route issue, fare issue, safety, other`), view, assign, update, escalate, resolve, close, history, attachments (presigned S3), passenger feedback + rating.
 Test: full lifecycle open→resolved→closed; escalation changes assignee + audit; attachment keys stored; guest cannot create.
 
 ### P1-40 — Lost & Found
-- [ ] 🔨 Developed
-- [ ] 🧪 Tested
-- [ ] ✅ Done
+- [x] 🔨 Developed
+- [x] 🧪 Tested
+- [x] ✅ Done
 
 Scope: lost item report, found item report, description, image attachment, vehicle/route info, date/time, lost↔found matching, staff assignment, status updates, return confirmation, case closure.
 Test: matching suggests candidates by route + date window; return confirmation closes both records.

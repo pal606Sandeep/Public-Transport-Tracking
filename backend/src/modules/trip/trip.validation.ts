@@ -50,3 +50,26 @@ export const scheduleTripCreateSchema = z
     status: z.enum(["CANCELLED", "MISSED"]),
   })
   .strict();
+
+// P1-28
+
+export const tripActionSchema = z
+  .object({
+    action: z.enum(["pause", "resume", "end"]),
+  })
+  .strict();
+
+// P1-29
+
+export const startTripSchema = z.object({}).strict();
+
+export const checklistSchema = z
+  .object({
+    fuel: z.boolean().optional(),
+    tyres: z.boolean().optional(),
+    brakes: z.boolean().optional(),
+    lights: z.boolean().optional(),
+    documentsValid: z.boolean().optional(),
+    cleanliness: z.boolean().optional(),
+  })
+  .strict();

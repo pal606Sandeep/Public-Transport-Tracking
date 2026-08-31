@@ -5,6 +5,9 @@ import { AppError } from "../../utils/AppError.js";
 import { Stop } from "../stop/stop.model.js";
 import { Route } from "../route/route.model.js";
 import { broadcastToRoute, broadcastToStop, broadcastToAll } from "../../config/socket.js";
+import { Passenger } from "../passenger/passenger.model.js";
+import { getSubscriberUserIds } from "../passenger/subscription.service.js";
+import { dispatchNotification } from "../notification/notification.service.js";
 import logger from "../../utils/logger.js";
 
 export type TargetingInput =
@@ -102,6 +105,52 @@ export const emitToRooms = (alert: Record<string, unknown>): void => {
   });
 };
 
+/**
+ * P1-38 scope: "fan out via Notification Service". Alongside the socket
+ * broadcast, deliver an in-app / web-push notification to the passengers who
+ * follow the alert's resolved routes / stops (or every passenger for "all").
+ * Best-effort — a failure here never fails the publish.
+ */
+export const fanOutServiceAlert = async (alert: Record<string, unknown>): Promise<number> => {
+  try {
+    const alertId = String(alert._id);
+    const targetingType = (alert.targeting as { type?: string } | undefined)?.type;
+    const userIds = new Set<string>();
+
+    if (targetingType === "all") {
+      const passengers = await Passenger.find({ blocked: false }).select("userId").lean();
+      passengers.forEach((p) => userIds.add(p.userId.toString()));
+    } else {
+      for (const routeId of (alert.resolvedRouteIds as unknown[]) ?? []) {
+        for (const u of await getSubscriberUserIds("route", String(routeId))) userIds.add(u);
+      }
+      for (const stopId of (alert.resolvedStopIds as unknown[]) ?? []) {
+        for (const u of await getSubscriberUserIds("stop", String(stopId))) userIds.add(u);
+      }
+    }
+
+    let notified = 0;
+    for (const userId of userIds) {
+      const res = await dispatchNotification({
+        userId,
+        type: "SERVICE_ALERT",
+        title: String(alert.title ?? "Service alert"),
+        body: String(alert.message ?? ""),
+        channels: ["inApp", "webpush"],
+        urgent: alert.severity === "CRITICAL" || alert.severity === "critical",
+        data: { alertId, severity: alert.severity, type: alert.type },
+        dedupeKey: `SERVICE_ALERT:${alertId}`,
+      });
+      if (res.status !== "duplicate") notified++;
+    }
+    logger.info(`Service alert ${alertId} notification fan-out → ${notified} users`);
+    return notified;
+  } catch (err) {
+    logger.warn(`Service alert notification fan-out failed: ${(err as Error).message}`);
+    return 0;
+  }
+};
+
 export const listServiceAlerts = async (input: {
   page: number;
   limit: number;
@@ -170,7 +219,10 @@ export const createServiceAlert = async (
   });
 
   const serialized = serializeAlert(doc.toObject());
-  if (publishNow) emitToRooms(serialized as Record<string, unknown>);
+  if (publishNow) {
+    emitToRooms(serialized as Record<string, unknown>);
+    await fanOutServiceAlert(serialized as Record<string, unknown>);
+  }
   return serialized;
 };
 
@@ -234,6 +286,7 @@ export const publishServiceAlert = async (id: string, a?: { id?: string; role?: 
 
   const serialized = serializeAlert(doc.toObject());
   emitToRooms(serialized as Record<string, unknown>);
+  await fanOutServiceAlert(serialized as Record<string, unknown>);
   return serialized;
 };
 

@@ -57,3 +57,10 @@ export const blockPassengerSchema = z
     reason: z.string().max(500).optional(),
   })
   .strict();
+
+export const addSubscriptionSchema = z
+  .object({
+    type: z.enum(["route", "stop"]),
+    targetId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid targetId"),
+  })
+  .strict();

@@ -33,7 +33,18 @@ export const validate =
       next(toAppError(parsed.error));
       return;
     }
-    (req as any)[source] = parsed.data;
+    // In Express 5 `req.query` / `req.params` are getter-only, so a plain
+    // assignment throws. Redefine the property with the parsed value instead.
+    if (source === "body") {
+      (req as any).body = parsed.data;
+    } else {
+      Object.defineProperty(req, source, {
+        value: parsed.data,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    }
     next();
   };
 

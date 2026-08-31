@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as c from "./passenger.controller.js";
 import { authenticate, authorize } from "../../middlewares/rbac.js";
+import { denyGuest } from "../../middlewares/denyGuest.js";
 import { validate } from "../../utils/validation.js";
 import {
   updatePreferencesSchema,
@@ -9,6 +10,7 @@ import {
   updateSavedLocationSchema,
   createRecentSearchSchema,
   blockPassengerSchema,
+  addSubscriptionSchema,
 } from "./passenger.validation.js";
 
 const router = Router();
@@ -26,6 +28,10 @@ router.get("/me/saved-locations", c.listSavedLocations);
 router.post("/me/saved-locations", validate(createSavedLocationSchema), c.createSavedLocation);
 router.patch("/me/saved-locations/:id", validate(updateSavedLocationSchema), c.updateSavedLocation);
 router.delete("/me/saved-locations/:id", c.deleteSavedLocation);
+
+router.get("/me/subscriptions", denyGuest, c.listSubscriptions);
+router.post("/me/subscriptions", denyGuest, validate(addSubscriptionSchema), c.addSubscription);
+router.delete("/me/subscriptions/:id", denyGuest, c.removeSubscription);
 
 router.get("/me/recent-searches", c.listRecentSearches);
 router.post("/me/recent-searches", validate(createRecentSearchSchema), c.createRecentSearch);
