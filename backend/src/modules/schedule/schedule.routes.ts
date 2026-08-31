@@ -1,12 +1,17 @@
 import { Router } from "express";
-import { getAll, getById, create, update, remove } from "./schedule.controller.js";
+import * as c from "./schedule.controller.js";
+import { authenticate, authorize } from "../../middlewares/rbac.js";
+import { validate } from "../../utils/validation.js";
+import { createScheduleSchema, updateScheduleSchema, generateScheduleSchema } from "./schedule.validation.js";
 
-const router = Router();
+const adminRouter = Router();
+adminRouter.use(authenticate, authorize("MANAGE", "schedule"));
 
-router.get("/", getAll);
-router.get("/:id", getById);
-router.post("/", create);
-router.put("/:id", update);
-router.delete("/:id", remove);
+adminRouter.get("/", c.list);
+adminRouter.post("/", validate(createScheduleSchema), c.create);
+adminRouter.get("/:id", c.get);
+adminRouter.patch("/:id", validate(updateScheduleSchema), c.update);
+adminRouter.post("/:id/generate", validate(generateScheduleSchema), c.generate);
+adminRouter.delete("/:id", c.remove);
 
-export default router;
+export { adminRouter as adminScheduleRouter };
