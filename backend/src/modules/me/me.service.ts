@@ -6,6 +6,7 @@ import { Route } from "../route/route.model.js";
 import { AssignmentRequest } from "./me.model.js";
 import { AuditLog } from "../../models/auditLog.model.js";
 import { AppError } from "../../utils/AppError.js";
+import { broadcastToFleetAll } from "../../config/socket.js";
 
 const actor = (a?: { id?: string; role?: string }) => ({ actorId: a?.id ?? null, actorRole: a?.role ?? null });
 
@@ -133,6 +134,18 @@ export const requestAssignment = async (
     resourceId: doc._id.toString(),
     severity: "INFO",
   });
+
+  // P2-25 — surface manual-assignment requests on the admin fleet:all stream.
+  broadcastToFleetAll("assignment:changed", {
+    _id: doc._id.toString(),
+    event: "REQUESTED",
+    staffType: doc.staffType,
+    staffId: doc.staffId.toString(),
+    requestedDate: doc.requestedDate,
+    status: doc.status,
+    timestamp: Date.now(),
+  });
+
   return {
     _id: doc._id.toString(),
     status: doc.status,
@@ -190,6 +203,17 @@ export const decideRequest = async (
     resourceId: id,
     severity: "WARN",
   });
+
+  broadcastToFleetAll("assignment:changed", {
+    _id: doc._id.toString(),
+    event: status === "APPROVED" ? "APPROVED" : "REJECTED",
+    staffType: doc.staffType,
+    staffId: doc.staffId.toString(),
+    requestedDate: doc.requestedDate,
+    status: doc.status,
+    timestamp: Date.now(),
+  });
+
   return { _id: doc._id.toString(), status: doc.status, note: doc.note };
 };
 
