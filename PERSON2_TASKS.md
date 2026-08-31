@@ -23,9 +23,9 @@ Checkbox legend: `[ ]` not started · `[x]` complete.
 
 | Phase | Tasks | Developed | Tested | Done |
 |-------|-------|-----------|--------|------|
-| 3 — Real-Time Engine | P2-01 … P2-28 | 1 / 28 | 0 / 28 | 0 / 28 |
+| 3 — Real-Time Engine | P2-01 … P2-28 | 2 / 28 | 0 / 28 | 0 / 28 |
 | 7 — Production (real-time) | P2-29 … P2-31 | 0 / 3 | 0 / 3 | 0 / 3 |
-| **Total** | **31** | **1 / 31** | **0 / 31** | **0 / 31** |
+| **Total** | **31** | **2 / 31** | **0 / 31** | **0 / 31** |
 
 ---
 
@@ -41,7 +41,7 @@ Scope: tracking module layout under `src/modules/tracking/*` + a separate `worke
 Test: worker + tracking routes boot; Mongo + Redis reachable; `@turf` imports resolve.
 
 ### P2-02 — Socket.IO server + auth handshake + rooms + Redis adapter
-- [ ] 🔨 Developed
+- [x] 🔨 Developed
 - [ ] 🧪 Tested
 - [ ] ✅ Done
 
