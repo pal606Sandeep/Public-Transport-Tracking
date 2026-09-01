@@ -2,12 +2,29 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const trackingConfig = {
-  redis: {
+const resolveRedisConfig = () => {
+  const url = process.env.REDIS_URL;
+
+  if (url) {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: Number(parsed.port) || 6379,
+      username: decodeURIComponent(parsed.username) || undefined,
+      password: decodeURIComponent(parsed.password) || undefined,
+      tls: parsed.protocol === "rediss:" ? {} : undefined,
+    };
+  }
+
+  return {
     host: process.env.REDIS_HOST || "localhost",
     port: Number(process.env.REDIS_PORT) || 6379,
     password: process.env.REDIS_PASSWORD || undefined,
-  },
+  };
+};
+
+export const trackingConfig = {
+  redis: resolveRedisConfig(),
   mongo: {
     uri: process.env.MONGO_URI || "",
   },
