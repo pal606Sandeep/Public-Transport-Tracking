@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { apiResponse } from "../../utils/apiResponse.js";
 import * as svc from "./passenger.service.js";
+import * as subs from "./subscription.service.js";
 
 const uid = (req: Request): string => req.user!.id;
 
@@ -78,6 +79,26 @@ export const deleteRecentSearch = asyncHandler(async (req: Request, res: Respons
 export const clearRecentSearches = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   await svc.clearRecentSearches(uid(req));
   apiResponse(res, 200, true, "Recent searches cleared");
+});
+
+/* ---------------------- favourite subscriptions (P1-35) ------------- */
+
+export const listSubscriptions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const subscriptions = await subs.listSubscriptions(uid(req));
+  apiResponse(res, 200, true, "Subscriptions", { subscriptions });
+});
+
+export const addSubscription = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const body = req.body as { type: "route" | "stop"; targetId: string };
+  const { subscription, created } = await subs.addSubscription(uid(req), body.type, body.targetId);
+  apiResponse(res, created ? 201 : 200, true, created ? "Subscription created" : "Already subscribed", {
+    subscription,
+  });
+});
+
+export const removeSubscription = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  await subs.removeSubscription(uid(req), (req.params as { id: string }).id);
+  apiResponse(res, 200, true, "Subscription removed");
 });
 
 /* ---------------------- admin ---------------------------------------- */

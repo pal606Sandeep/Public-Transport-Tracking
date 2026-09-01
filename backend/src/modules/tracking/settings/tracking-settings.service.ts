@@ -9,9 +9,23 @@ import logger from "../../../utils/logger.js";
  * used here since these values change rarely and every tracking process
  * (API + worker) needs its own local read.
  */
+export interface DepotConfig {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export interface TrackingSettings {
   geofenceRadiusMeters: number;
   depotRadiusMeters: number;
+  /**
+   * P2-10 depot geofencing stub: no depot data model exists in Person 1's
+   * code yet, so depot locations are read from this System Settings key
+   * (`depots`) instead — swap for a real depot collection once Person 1
+   * builds one. Empty by default (nothing to geofence against).
+   */
+  depots: DepotConfig[];
   delayThresholds: { onTime: number; delayed: number; severe: number };
   deviationThresholdMeters: number;
   deviationDwellSeconds: number;
@@ -27,6 +41,7 @@ let cached: { value: TrackingSettings; at: number } | null = null;
 const defaults = (): TrackingSettings => ({
   geofenceRadiusMeters: trackingConfig.geofence.defaultRadiusMeters,
   depotRadiusMeters: trackingConfig.geofence.depotRadiusMeters,
+  depots: [],
   delayThresholds: { ...trackingConfig.delay.thresholds },
   deviationThresholdMeters: trackingConfig.deviation.thresholdMeters,
   deviationDwellSeconds: trackingConfig.deviation.dwellSeconds,
@@ -54,6 +69,7 @@ export const getTrackingSettings = async (): Promise<TrackingSettings> => {
           "offlineVehicleTimeoutSeconds",
           "driverIdleTimeoutSeconds",
           "gpsHistoryRetentionDays",
+          "depots",
         ],
       },
     }).lean();
@@ -62,6 +78,7 @@ export const getTrackingSettings = async (): Promise<TrackingSettings> => {
 
     if (byKey.has("geofenceRadiusMeters")) base.geofenceRadiusMeters = Number(byKey.get("geofenceRadiusMeters"));
     if (byKey.has("depotRadiusMeters")) base.depotRadiusMeters = Number(byKey.get("depotRadiusMeters"));
+    if (byKey.has("depots")) base.depots = (byKey.get("depots") as DepotConfig[]) ?? [];
     if (byKey.has("deviationThresholdMeters")) base.deviationThresholdMeters = Number(byKey.get("deviationThresholdMeters"));
     if (byKey.has("deviationDwellSeconds")) base.deviationDwellSeconds = Number(byKey.get("deviationDwellSeconds"));
     if (byKey.has("offlineStaleTimeoutSeconds")) base.offlineStaleTimeoutSeconds = Number(byKey.get("offlineStaleTimeoutSeconds"));

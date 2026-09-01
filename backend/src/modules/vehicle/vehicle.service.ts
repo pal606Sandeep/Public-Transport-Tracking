@@ -5,6 +5,7 @@ import { AppError } from "../../utils/AppError.js";
 import "../../modules/driver/driver.model.js";
 import "../../modules/conductor/conductor.model.js";
 import "../../modules/route/route.model.js";
+import { vehicleHealth } from "../maintenance/maintenance.service.js";
 
 export type VehicleInput = {
   registrationNumber: string;
@@ -72,7 +73,8 @@ export const getVehicleById = async (id: string, includeDeleted = false): Promis
     .populate("assignedRoute", "routeNumber name")
     .lean();
   if (!doc) throw AppError.notFound("Vehicle not found", "VEHICLE_NOT_FOUND");
-  return serializeVehicle(doc, true);
+  const health = await vehicleHealth(id);
+  return { ...serializeVehicle(doc, true), documentsStatus: health.documents, serviceDue: health.serviceDue };
 };
 
 export const createVehicle = async (input: VehicleInput, a?: { id?: string; role?: string }): Promise<unknown> => {

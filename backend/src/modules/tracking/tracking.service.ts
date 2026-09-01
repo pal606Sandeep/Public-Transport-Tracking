@@ -10,9 +10,10 @@ import { detectGPSAnomaly, isDuplicateFix, AnomalyResult } from "./anomaly/gps-a
 import { detectCurrentStop } from "./geo/current-stop.service.js";
 import { calculateETA } from "./geo/eta.service.js";
 import { detectRouteDeviation } from "./geo/deviation.service.js";
-import { processGeofence } from "./geo/geofence-processing.service.js";
+import { processGeofence, processDepotGeofence } from "./geo/geofence-processing.service.js";
 import { updateDriverStatus, getDriverCurrentStatus } from "./geo/driver-status.service.js";
 import { broadcastGeofenceEvent, broadcastRouteDeviation, broadcastDelayStatus } from "./geo/broadcast.service.js";
+import { broadcastToVehicle, broadcastToFleetAll } from "../../config/socket.js";
 import { persistGPSPoint } from "./geo/gps-history.service.js";
 import { detectDelay } from "./geo/delay.service.js";
 import { loadRouteCache } from "./geo/geospatial.service.js";
@@ -316,6 +317,24 @@ export const processGPSSchema = async (data: GPSSchema): Promise<{ routeId: stri
   }
 
   await updateVehicleLocation(data);
+
+  // P2-10 depot arrival/departure — independent of an active trip.
+  const depotResults = await processDepotGeofence(data.vehicleId, data.latitude, data.longitude, Date.now()).catch(
+    () => [] as Awaited<ReturnType<typeof processDepotGeofence>>
+  );
+  for (const depotEvent of depotResults) {
+    const payload = {
+      vehicleId: depotEvent.vehicleId,
+      depotId: depotEvent.depotId,
+      depotName: depotEvent.depotName,
+      distanceMeters: depotEvent.distanceMeters,
+      lat: depotEvent.lat,
+      lng: depotEvent.lng,
+      timestamp: depotEvent.timestamp,
+    };
+    broadcastToVehicle(depotEvent.vehicleId, depotEvent.eventType, payload);
+    broadcastToFleetAll(depotEvent.eventType, payload);
+  }
 
   if (data.tripId) {
     const trip = validatedTrip;

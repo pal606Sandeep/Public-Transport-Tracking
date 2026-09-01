@@ -50,3 +50,52 @@ export const scheduleTripCreateSchema = z
     status: z.enum(["CANCELLED", "MISSED"]),
   })
   .strict();
+
+// P1-28
+
+export const tripActionSchema = z
+  .object({
+    action: z.enum(["pause", "resume", "end"]),
+  })
+  .strict();
+
+// P1-29
+
+export const startTripSchema = z.object({}).strict();
+
+export const checklistSchema = z
+  .object({
+    fuel: z.boolean().optional(),
+    tyres: z.boolean().optional(),
+    brakes: z.boolean().optional(),
+    lights: z.boolean().optional(),
+    documentsValid: z.boolean().optional(),
+    cleanliness: z.boolean().optional(),
+  })
+  .strict();
+
+// P1-46
+
+export const passengerCountItemSchema = z
+  .object({
+    idempotencyKey: z.string().min(1).max(120),
+    stop: idString.optional(),
+    boarded: z.number().min(0).optional(),
+    alighted: z.number().min(0).optional(),
+    recordedAt: z.string().optional(),
+  })
+  .strict();
+
+export const passengerCountBulkSchema = z
+  .object({
+    items: z.array(passengerCountItemSchema).min(1).max(50),
+  })
+  .strict();
+
+export const reconciliationSchema = z
+  .object({
+    ticketsIssued: z.number().min(0),
+    cashCollected: z.number().min(0),
+    digitalCollected: z.number().min(0),
+  })
+  .strict();

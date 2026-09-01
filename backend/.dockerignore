@@ -1,0 +1,15 @@
+# .dockerignore — keep build context small.
+node_modules
+dist
+.env
+.env.local
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+.dockerignore
+tests
+coverage
+*.log
+.vscode
+.idea
