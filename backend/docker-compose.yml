@@ -1,15 +1,17 @@
-# Single-node MongoDB replica set for local development.
-# A replica set is REQUIRED so multi-document transactions and change streams
-# work — a bare `mongod` (without --replSet) fails those operations.
+# Full-stack Compose for local development.
 #
-# This uses host networking on port 27018 so the advertised member host
-# (`localhost:27018`) resolves from the host without a container-name mapping.
+# Brings up MongoDB (single-node replica set, required for transactions +
+# change streams) and Redis, plus the backend API + the background worker.
 #
 # Usage:
-#   docker compose up -d mongo
-#   docker compose exec mongo mongosh --quiet --port 27018 --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27018'}]})"
-# Then set MONGO_URI in backend/.env:
-#   MONGO_URI=mongodb://localhost:27018/transport_tracking
+#   docker compose up -d
+#   # one-time: initialise the replica set (the mongo service uses --replSet rs0
+#   # but `rs.initiate()` still has to be called once after first start)
+#   docker compose exec mongo mongosh --quiet --port 27018 \
+#     --eval "rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27018'}]})"
+#   docker compose exec api npm run migrate:up
+#   docker compose exec api npm run seed
+
 services:
   mongo:
     image: mongo:7
@@ -18,6 +20,66 @@ services:
     command: ["mongod", "--replSet", "rs0", "--port", "27018", "--bind_ip_all"]
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--port", "27018", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:7-alpine
+    container_name: ptt-redis
+    network_mode: host
+    command: ["redis-server", "--port", "6379", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ptt-api
+    network_mode: host
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: mongodb://localhost:27018/transport_tracking
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: production
+      PORT: "4000"
+    command: ["node", "dist/index.js"]
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ptt-worker
+    network_mode: host
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      MONGO_URI: mongodb://localhost:27018/transport_tracking
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: production
+    command: ["node", "dist/worker.js"]
+    restart: unless-stopped
 
 volumes:
   mongo-data:
+  redis-data:

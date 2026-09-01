@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import { limiter } from "./middlewares/rateLimiter.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 import { traceIdMiddleware } from "./middlewares/traceId.js";
+import { httpMetricsMiddleware } from "./middlewares/metrics.js";
 import { apiResponse } from "./utils/apiResponse.js";
 import { idempotent, idempotencyRequired } from "./middlewares/idempotency.js";
 
@@ -26,16 +27,30 @@ import { adminRouteRouter, publicRouteRouter } from "./modules/route/route.route
 import { adminStopRouter, publicStopRouter } from "./modules/stop/stop.routes.js";
 import { adminScheduleRouter } from "./modules/schedule/schedule.routes.js";
 import { adminRouter, staffRouter } from "./modules/trip/trip.routes.js";
+import tripSyncRouter from "./modules/trip/tripSync.routes.js";
+import occupancyAnalyticsRouter from "./modules/analytics/occupancy.routes.js";
+import analyticsRouter from "./modules/analytics/analytics.routes.js";
+import maintenanceRouter from "./modules/maintenance/maintenance.routes.js";
+import incidentRouter from "./modules/incident/incident.routes.js";
+import reportsRouter from "./modules/reports/reports.routes.js";
+import auditLogRouter from "./modules/auditLog/auditLog.routes.js";
+import systemSettingRouter from "./modules/systemSetting/systemSetting.routes.js";
+import adminDispatchRouter from "./modules/adminDispatch/adminDispatch.routes.js";
 import { meRouter, adminRequestRouter } from "./modules/me/me.routes.js";
 import syncRoutes from "./modules/sync/sync.routes.js";
 import uploadRoutes from "./modules/uploads/uploads.routes.js";
 import trackingRoutes from "./modules/tracking/tracking.routes.js";
 import gtfsRealtimeRoutes from "./modules/tracking/gtfs/gtfs-rt.routes.js";
+import gtfsStaticRoutes from "./modules/gtfs/gtfs-static.routes.js";
+import monitoringRoutes from "./modules/monitoring/monitoring.routes.js";
 import notificationRoutes, { adminNotificationRouter } from "./modules/notification/notification.routes.js";
 import { discoveryRouter, journeyRouter } from "./modules/discovery/discovery.routes.js";
 import { adminServiceAlertRouter, publicServiceAlertRouter } from "./modules/serviceAlert/serviceAlert.routes.js";
 import { complaintRouter, adminComplaintRouter } from "./modules/complaint/complaint.routes.js";
 import { lostFoundRouter, adminLostFoundRouter } from "./modules/lostFound/lostFound.routes.js";
+import { adminFareRouter, publicFareRouter } from "./modules/fare/fare.routes.js";
+import ticketRoutes from "./modules/ticket/ticket.routes.js";
+import paymentRoutes, { adminPaymentRouter, webhookRouter } from "./modules/payment/payment.routes.js";
 
 dotenv.config();
 
@@ -43,6 +58,7 @@ const app: Express = express();
 
 app.use(helmet());
 app.use(traceIdMiddleware);
+app.use(httpMetricsMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -91,6 +107,7 @@ app.use("/api/v1/admin/stops", adminStopRouter);
 app.use("/api/v1/admin/routes", adminRouteRouter);
 app.use("/api/v1/admin/schedules", adminScheduleRouter);
 app.use("/api/v1/admin/trips", adminRouter);
+app.use("/api/v1/trips", tripSyncRouter);
 app.use("/api/v1/trips", staffRouter);
 app.use("/api/v1/admin/assignment-requests", adminRequestRouter);
 app.use("/api/v1/me", meRouter);
@@ -104,6 +121,7 @@ app.use("/api/v1/routes", publicRouteRouter);
 app.use("/api/v1/stops", publicStopRouter);
 app.use("/api/v1/tracking", trackingRoutes);
 app.use("/api/v1/gtfs/realtime", gtfsRealtimeRoutes);
+app.use("/api/v1/gtfs", gtfsStaticRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/admin/notification-templates", adminNotificationRouter);
 app.use("/api/v1/discovery", discoveryRouter);
@@ -114,9 +132,26 @@ app.use("/api/v1/complaints", complaintRouter);
 app.use("/api/v1/admin/complaints", adminComplaintRouter);
 app.use("/api/v1/lost-found", lostFoundRouter);
 app.use("/api/v1/admin/lost-found", adminLostFoundRouter);
+app.use("/api/v1/admin/fares", adminFareRouter);
+app.use("/api/v1/fares", publicFareRouter);
+app.use("/api/v1/tickets", ticketRoutes);
+app.use("/api/v1/payments/webhook", webhookRouter);
+app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/v1/admin/payments", adminPaymentRouter);
+app.use("/api/v1/admin/analytics", occupancyAnalyticsRouter);
+app.use("/api/v1/admin/analytics", analyticsRouter);
+app.use("/api/v1/admin/maintenance", maintenanceRouter);
+app.use("/api/v1/admin/incidents", incidentRouter);
+app.use("/api/v1/admin/reports", reportsRouter);
+app.use("/api/v1/admin/audit-logs", auditLogRouter);
+app.use("/api/v1/admin/system-settings", systemSettingRouter);
+app.use("/api/v1/admin/dispatch", adminDispatchRouter);
 
 // OpenAPI spec + mock server (P1-18)
 app.use("/api-docs", specRouter());
+
+// /metrics — Prometheus exposition (cluster-internal, no auth)
+app.use("/metrics", monitoringRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -30,6 +30,14 @@ export interface ITrip {
   cancelReason?: string | null;
   cancelledAt?: Date | null;
   checklist?: Record<string, unknown> | null;
+  passengerSummary?: {
+    onBoard: number;
+    boarded: number;
+    alighted: number;
+    perStop: { stop?: Types.ObjectId | null; boarded: number; alighted: number; onBoard: number }[];
+    updatedAt?: Date | null;
+  } | null;
+  reconciliation?: Record<string, unknown> | null;
 }
 
 const tripSchema = new mongoose.Schema<ITrip>(
@@ -62,6 +70,42 @@ const tripSchema = new mongoose.Schema<ITrip>(
     cancelReason: { type: String, default: null },
     cancelledAt: { type: Date, default: null },
     checklist: { type: mongoose.Schema.Types.Mixed, default: null },
+    passengerSummary: {
+      type: new mongoose.Schema(
+        {
+          onBoard: { type: Number, default: 0 },
+          boarded: { type: Number, default: 0 },
+          alighted: { type: Number, default: 0 },
+          perStop: [
+            {
+              _id: false,
+              stop: { type: mongoose.Schema.Types.ObjectId, ref: "Stop", default: null },
+              boarded: { type: Number, default: 0 },
+              alighted: { type: Number, default: 0 },
+              onBoard: { type: Number, default: 0 },
+            },
+          ],
+          updatedAt: { type: Date, default: null },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
+    reconciliation: {
+      type: new mongoose.Schema(
+        {
+          expected: { type: Number, default: 0 },
+          collected: { type: Number, default: 0 },
+          variance: { type: Number, default: 0 },
+          ticketsIssued: { type: Number, default: 0 },
+          cashCollected: { type: Number, default: 0 },
+          digitalCollected: { type: Number, default: 0 },
+          reconciledAt: { type: Date, default: null },
+        },
+        { _id: false }
+      ),
+      default: null,
+    },
   },
   { timestamps: true }
 );

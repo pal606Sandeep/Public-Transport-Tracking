@@ -73,3 +73,29 @@ export const checklistSchema = z
     cleanliness: z.boolean().optional(),
   })
   .strict();
+
+// P1-46
+
+export const passengerCountItemSchema = z
+  .object({
+    idempotencyKey: z.string().min(1).max(120),
+    stop: idString.optional(),
+    boarded: z.number().min(0).optional(),
+    alighted: z.number().min(0).optional(),
+    recordedAt: z.string().optional(),
+  })
+  .strict();
+
+export const passengerCountBulkSchema = z
+  .object({
+    items: z.array(passengerCountItemSchema).min(1).max(50),
+  })
+  .strict();
+
+export const reconciliationSchema = z
+  .object({
+    ticketsIssued: z.number().min(0),
+    cashCollected: z.number().min(0),
+    digitalCollected: z.number().min(0),
+  })
+  .strict();

@@ -33,7 +33,7 @@ const concessionSchema = new mongoose.Schema<IConcession>(
   { timestamps: true }
 );
 
-concessionSchema.index({ code: 1, unique: true });
+concessionSchema.index({ code: 1 }, { unique: true });
 concessionSchema.index({ type: 1, isActive: 1 });
 
 export const Concession = mongoose.model<IConcession>("Concession", concessionSchema);

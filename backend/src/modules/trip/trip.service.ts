@@ -581,4 +581,6 @@ export const serializeTrip = (t: any): Record<string, unknown> => ({
   endTime: t.endTime ?? null,
   cancelReason: t.cancelReason ?? null,
   cancelledAt: t.cancelledAt ?? null,
+  passengerSummary: t.passengerSummary ?? null,
+  reconciliation: t.reconciliation ?? null,
 });
