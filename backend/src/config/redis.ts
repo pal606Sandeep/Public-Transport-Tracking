@@ -4,10 +4,37 @@ import logger from "../utils/logger.js";
 
 dotenv.config();
 
+type RedisConnectionOptions = {
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+  tls?: Record<string, never>;
+};
+
+const parseRedisUrl = (): RedisConnectionOptions => {
+  const url = process.env.REDIS_URL;
+
+  if (url) {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: Number(parsed.port) || 6379,
+      username: decodeURIComponent(parsed.username) || undefined,
+      password: decodeURIComponent(parsed.password) || undefined,
+      tls: parsed.protocol === "rediss:" ? {} : undefined,
+    };
+  }
+
+  return {
+    host: process.env.REDIS_HOST || "localhost",
+    port: Number(process.env.REDIS_PORT) || 6379,
+    password: process.env.REDIS_PASSWORD || undefined,
+  };
+};
+
 export const redisOptions = {
-  host: process.env.REDIS_HOST || "localhost",
-  port: Number(process.env.REDIS_PORT) || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
+  ...parseRedisUrl(),
   maxRetriesPerRequest: null,
   enableReadyCheck: true,
   lazyConnect: true,
