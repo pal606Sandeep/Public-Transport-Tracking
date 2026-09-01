@@ -36,7 +36,9 @@ const userRooms = new Map<string, RoomSubscription>();
 export const initSocket = (httpServer: http.Server): SocketIOServer => {
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN || "*",
+      origin: process.env.CORS_ORIGIN
+        ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim())
+        : "*",
       methods: ["GET", "POST"],
       credentials: true,
     },
