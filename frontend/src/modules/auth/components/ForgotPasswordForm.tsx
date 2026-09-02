@@ -54,7 +54,7 @@ export function ForgotPasswordForm() {
         )}
       </Field>
 
-      <Button type="submit" fullWidth loading={isSubmitting || forgot.isPending}>
+      <Button type="submit" fullWidth size="xl" loading={isSubmitting || forgot.isPending}>
         Send reset link
       </Button>
     </form>

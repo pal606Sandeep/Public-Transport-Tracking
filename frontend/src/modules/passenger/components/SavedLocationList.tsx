@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Input, Alert } from "@/components/ui";
+import { Button, Input, Alert, Card, Skeleton } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import {
   useSavedLocations,
@@ -22,7 +22,10 @@ export function SavedLocationList() {
     const latN = Number(lat);
     const lngN = Number(lng);
     if (!name.trim() || Number.isNaN(latN) || Number.isNaN(lngN)) return;
-    await create.mutateAsync({ name: name.trim(), location: { lat: latN, lng: lngN } });
+    await create.mutateAsync({
+      name: name.trim(),
+      location: { lat: latN, lng: lngN },
+    });
     setName("");
     setLat("");
     setLng("");
@@ -30,24 +33,28 @@ export function SavedLocationList() {
   };
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <section>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
           Saved places
         </h3>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="text-sm text-primary"
+          className="text-[13px] font-semibold text-accent"
         >
           {open ? "Cancel" : "Add"}
         </button>
       </div>
 
-      {create.isError && <Alert tone="error">{errorMessage(create.error)}</Alert>}
+      {create.isError && (
+        <Alert tone="error" className="mb-2">
+          {errorMessage(create.error)}
+        </Alert>
+      )}
 
       {open && (
-        <div className="flex flex-col gap-2 rounded-[var(--radius-app)] border p-3">
+        <Card className="mb-2 flex flex-col gap-2 p-3">
           <Input
             placeholder="Name (e.g. Home)"
             value={name}
@@ -67,27 +74,29 @@ export function SavedLocationList() {
               onChange={(e) => setLng(e.target.value)}
             />
           </div>
-          <Button size="sm" loading={create.isPending} onClick={submit}>
+          <Button size="lg" loading={create.isPending} onClick={submit}>
             Save place
           </Button>
-        </div>
+        </Card>
       )}
 
       {isLoading ? (
-        <div className="h-16 animate-pulse rounded-[var(--radius-app)] bg-muted" />
+        <Skeleton className="h-16 w-full" />
       ) : locations.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No saved places yet.</p>
+        <p className="px-1 text-[13.5px] text-muted-foreground">
+          No saved places yet.
+        </p>
       ) : (
-        <ul className="divide-y rounded-[var(--radius-app)] border">
+        <Card className="divide-y overflow-hidden">
           {locations.map((loc) => (
-            <li
+            <div
               key={loc._id}
-              className="flex items-center justify-between px-3 py-2.5 text-sm"
+              className="flex items-center justify-between px-4 py-3 text-[15px]"
             >
               <div className="min-w-0">
                 <div className="truncate font-medium">{loc.name}</div>
                 {loc.address && (
-                  <div className="truncate text-xs text-muted-foreground">
+                  <div className="truncate text-[12.5px] text-muted-foreground">
                     {loc.address}
                   </div>
                 )}
@@ -95,13 +104,13 @@ export function SavedLocationList() {
               <button
                 type="button"
                 onClick={() => del.mutate(loc._id)}
-                className="text-xs text-muted-foreground hover:text-destructive"
+                className="shrink-0 text-[13px] font-medium text-muted-foreground transition-colors active:text-destructive"
               >
                 Remove
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
+        </Card>
       )}
     </section>
   );

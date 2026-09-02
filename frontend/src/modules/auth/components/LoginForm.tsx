@@ -72,7 +72,7 @@ export function LoginForm() {
         </Link>
       </div>
 
-      <Button type="submit" fullWidth loading={isSubmitting || login.isPending}>
+      <Button type="submit" fullWidth size="xl" loading={isSubmitting || login.isPending}>
         Sign in
       </Button>
     </form>

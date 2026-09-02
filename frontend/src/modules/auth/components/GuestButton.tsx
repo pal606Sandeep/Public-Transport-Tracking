@@ -20,7 +20,8 @@ export function GuestButton() {
 
   return (
     <Button
-      variant="secondary"
+      variant="ghost"
+      size="xl"
       fullWidth
       loading={guest.isPending}
       onClick={start}

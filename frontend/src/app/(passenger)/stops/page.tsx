@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, Input, Alert, EmptyState } from "@/components/ui";
+import {
+  PageHeader,
+  Input,
+  Alert,
+  EmptyState,
+  Card,
+  SkeletonList,
+} from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { useStops } from "@/modules/stop/hooks/useStops";
 import { StopListItem } from "@/modules/stop/components/StopListItem";
@@ -23,6 +30,7 @@ export default function StopsPage() {
   return (
     <>
       <PageHeader title="Stops" />
+
       <div className="p-4">
         <Input
           placeholder="Search stops"
@@ -36,27 +44,20 @@ export default function StopsPage() {
           <Alert tone="error">{errorMessage(error)}</Alert>
         </div>
       ) : isLoading ? (
-        <div className="space-y-2 px-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-14 animate-pulse rounded-[var(--radius-app)] bg-muted"
-            />
-          ))}
-        </div>
+        <SkeletonList rows={7} />
       ) : stops.length === 0 ? (
         <EmptyState
           title="No stops found"
-          hint={search ? "Try a different search." : "No stops are published yet."}
+          hint={
+            search ? "Try a different search." : "No stops are published yet."
+          }
         />
       ) : (
-        <ul className="divide-y border-y">
+        <Card className="mx-4 mb-4 divide-y overflow-hidden">
           {stops.map((stop) => (
-            <li key={stop._id}>
-              <StopListItem stop={stop} />
-            </li>
+            <StopListItem key={stop._id} stop={stop} />
           ))}
-        </ul>
+        </Card>
       )}
     </>
   );

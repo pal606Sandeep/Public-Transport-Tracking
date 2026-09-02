@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FullScreenLoader, Alert, EmptyState, Button } from "@/components/ui";
+import { Alert, EmptyState, Button, SkeletonList } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { cn } from "@/lib/cn";
 import { useSession } from "@/modules/auth/hooks/useAuth";
@@ -36,7 +36,7 @@ export function NotificationInbox() {
       />
     );
   }
-  if (isLoading) return <FullScreenLoader />;
+  if (isLoading) return <SkeletonList rows={6} />;
   if (error)
     return (
       <div className="p-4">
@@ -48,8 +48,8 @@ export function NotificationInbox() {
 
   return (
     <>
-      <div className="flex items-center justify-between border-b px-4 py-2">
-        <div className="flex gap-1 text-xs">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex gap-1 rounded-full bg-muted p-1">
           {(
             [
               ["All", false],
@@ -60,9 +60,9 @@ export function NotificationInbox() {
               key={label}
               onClick={() => setUnreadOnly(v)}
               className={cn(
-                "rounded-full px-2.5 py-1",
+                "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
                 unreadOnly === v
-                  ? "bg-foreground text-background"
+                  ? "bg-card text-foreground shadow-[var(--shadow-sm)]"
                   : "text-muted-foreground"
               )}
             >
@@ -85,7 +85,7 @@ export function NotificationInbox() {
       {items.length === 0 ? (
         <EmptyState title={unreadOnly ? "Nothing unread" : "No notifications"} />
       ) : (
-        <ul className="divide-y">
+        <ul className="divide-y border-t">
           {items.map((n) => {
             const url =
               typeof n.data?.url === "string" ? (n.data.url as string) : null;
@@ -98,24 +98,33 @@ export function NotificationInbox() {
                     if (url) router.push(url);
                   }}
                   className={cn(
-                    "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted",
-                    !n.read && "bg-primary/[0.04]"
+                    "flex w-full items-start gap-3 px-4 py-4 text-left transition-colors active:bg-muted",
+                    !n.read && "bg-accent/[0.05]"
                   )}
                 >
                   <span
                     className={cn(
                       "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                      n.read ? "bg-transparent" : "bg-primary"
+                      n.read ? "bg-transparent" : "bg-accent"
                     )}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-sm font-medium">{n.title}</p>
-                      <span className="shrink-0 text-xs text-muted-foreground">
+                      <p
+                        className={cn(
+                          "truncate text-[14.5px]",
+                          n.read ? "font-medium" : "font-semibold"
+                        )}
+                      >
+                        {n.title}
+                      </p>
+                      <span className="shrink-0 text-[12px] text-muted-foreground">
                         {timeAgo(n.createdAt)}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{n.body}</p>
+                    <p className="mt-0.5 text-[13.5px] leading-snug text-muted-foreground">
+                      {n.body}
+                    </p>
                   </div>
                 </button>
               </li>

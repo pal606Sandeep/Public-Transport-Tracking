@@ -1,10 +1,23 @@
 "use client";
 
-import { PageHeader, FullScreenLoader, EmptyState, Alert } from "@/components/ui";
+import {
+  PageHeader,
+  EmptyState,
+  Alert,
+  Card,
+  Badge,
+  SkeletonList,
+} from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { useServiceAlerts } from "@/modules/serviceAlert/hooks/useServiceAlerts";
 
 const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as const;
+const SEV_TONE = {
+  CRITICAL: "danger",
+  HIGH: "danger",
+  MEDIUM: "warning",
+  LOW: "neutral",
+} as const;
 
 export default function AlertsPage() {
   const { data, isLoading, error } = useServiceAlerts();
@@ -19,7 +32,7 @@ export default function AlertsPage() {
     <>
       <PageHeader title="Service alerts" back />
       {isLoading ? (
-        <FullScreenLoader />
+        <SkeletonList rows={5} />
       ) : error ? (
         <div className="p-4">
           <Alert tone="error">{errorMessage(error)}</Alert>
@@ -30,31 +43,38 @@ export default function AlertsPage() {
           hint="Disruptions, closures and weather notices show up here."
         />
       ) : (
-        <ul className="divide-y">
+        <div className="flex flex-col gap-3 p-4">
           {alerts.map((a) => (
-            <li key={a._id} className="p-4">
+            <Card key={a._id} className="p-4">
               <div className="flex items-center gap-2">
-                <span
-                  className={
-                    "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase " +
-                    (a.severity === "CRITICAL" || a.severity === "HIGH"
-                      ? "bg-destructive/10 text-destructive"
-                      : "bg-muted text-muted-foreground")
-                  }
-                >
+                <Badge tone={SEV_TONE[a.severity] ?? "neutral"}>
                   {a.severity}
+                </Badge>
+                <span className="text-[12px] font-medium capitalize text-muted-foreground">
+                  {a.type}
                 </span>
-                <span className="text-xs text-muted-foreground">{a.type}</span>
               </div>
-              <p className="mt-1 text-sm font-medium">{a.title}</p>
-              <p className="text-sm text-muted-foreground">{a.message}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {new Date(a.startsAt).toLocaleString()}
-                {a.endsAt ? ` – ${new Date(a.endsAt).toLocaleString()}` : ""}
+              <p className="mt-2 text-[15px] font-semibold">{a.title}</p>
+              <p className="mt-0.5 text-[13.5px] leading-snug text-muted-foreground">
+                {a.message}
               </p>
-            </li>
+              <p className="mt-2 text-[12px] text-muted-foreground">
+                {new Date(a.startsAt).toLocaleDateString([], {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+                {a.endsAt
+                  ? ` – ${new Date(a.endsAt).toLocaleDateString([], {
+                      day: "numeric",
+                      month: "short",
+                    })}`
+                  : ""}
+              </p>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
     </>
   );

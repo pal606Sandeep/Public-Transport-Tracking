@@ -69,6 +69,7 @@ export function LiveMap({
     );
     map.on("load", () => {
       readyRef.current = true;
+      map.resize();
       map.addSource("route", {
         type: "geojson",
         data: {
@@ -89,7 +90,14 @@ export function LiveMap({
       });
     });
     mapRef.current = map;
+
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+    const raf = requestAnimationFrame(() => map.resize());
+
     return () => {
+      ro.disconnect();
+      cancelAnimationFrame(raf);
       activeMarkers.forEach((m) => m.remove());
       activeMarkers.clear();
       map.remove();

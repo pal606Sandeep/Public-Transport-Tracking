@@ -1,26 +1,36 @@
 import type { StyleSpecification } from "maplibre-gl";
 
-/** Keyless raster style. Extend with a switch on `source` when more providers are configured. */
-const OSM: StyleSpecification = {
+/**
+ * Raster basemap. Defaults to OpenStreetMap's tile servers (keyless, but rate
+ * limited per-IP and blocked by some ad-blockers). Override with a single
+ * `{z}/{x}/{y}` template via NEXT_PUBLIC_MAP_TILE_URL — e.g. a MapTiler or
+ * Stadia URL with your key baked in.
+ */
+const ENV_TILE = process.env.NEXT_PUBLIC_MAP_TILE_URL;
+
+const OSM_TILES = [
+  "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+];
+
+const buildStyle = (): StyleSpecification => ({
   version: 8,
   sources: {
     base: {
       type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tiles: ENV_TILE ? [ENV_TILE] : OSM_TILES,
       tileSize: 256,
-      // OSM's tile server only serves up to z19 — cap here so MapLibre
-      // upscales z19 tiles past that instead of requesting 404s.
       maxzoom: 19,
-      attribution: "© OpenStreetMap contributors",
+      attribution: ENV_TILE
+        ? "© MapTiler © OpenStreetMap contributors"
+        : "© OpenStreetMap contributors",
     },
   },
-  layers: [{ id: "base", type: "raster", source: "base", maxzoom: 22 }],
-};
+  layers: [
+    { id: "bg", type: "background", paint: { "background-color": "#e8eaed" } },
+    { id: "base", type: "raster", source: "base" },
+  ],
+});
 
-export const styleFor = (source?: string): StyleSpecification => {
-  switch (source) {
-    // room for "maptiler", "satellite", … keyed styles later
-    default:
-      return OSM;
-  }
-};
+export const styleFor = (): StyleSpecification => buildStyle();

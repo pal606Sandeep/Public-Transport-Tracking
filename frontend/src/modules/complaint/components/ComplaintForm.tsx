@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Input, Alert } from "@/components/ui";
+import { Button, Field, Input, Select, Textarea, Alert } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { uploadMany } from "@/lib/uploads";
 import {
@@ -64,20 +64,17 @@ export function ComplaintForm() {
 
       <Field label="Category" required>
         {({ id }) => (
-          <select
+          <Select
             id={id}
             value={category}
-            onChange={(e) =>
-              setCategory(e.target.value as ComplaintCategory)
-            }
-            className="h-11 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
+            onChange={(e) => setCategory(e.target.value as ComplaintCategory)}
           >
             {COMPLAINT_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {CATEGORY_LABEL[c]}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </Field>
 
@@ -95,19 +92,18 @@ export function ComplaintForm() {
 
       <Field label="What happened?" required>
         {({ id }) => (
-          <textarea
+          <Textarea
             id={id}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={5}
             maxLength={2000}
-            placeholder="Give as much detail as you can — route number, stop, time, vehicle number."
-            className="rounded-[var(--radius-app)] border bg-card p-3 text-sm"
+            placeholder="Route number, stop, time, vehicle number — as much as you can."
           />
         )}
       </Field>
 
-      <Field label="Photos (optional)" hint="Up to 4 images.">
+      <Field label="Photos" hint="Optional · up to 4">
         {({ id }) => (
           <input
             id={id}
@@ -117,12 +113,12 @@ export function ComplaintForm() {
             onChange={(e) =>
               setFiles(Array.from(e.target.files ?? []).slice(0, 4))
             }
-            className="text-sm"
+            className="block w-full text-[13px] text-muted-foreground file:mr-3 file:rounded-full file:border-0 file:bg-muted file:px-4 file:py-2 file:text-[13px] file:font-semibold file:text-foreground"
           />
         )}
       </Field>
 
-      <Button type="submit" fullWidth loading={busy}>
+      <Button type="submit" size="xl" fullWidth loading={busy}>
         {uploading ? "Uploading photos…" : "Submit complaint"}
       </Button>
     </form>

@@ -104,7 +104,7 @@ export function RegisterForm() {
         )}
       </Field>
 
-      <Button type="submit" fullWidth loading={busy}>
+      <Button type="submit" fullWidth size="xl" loading={busy}>
         Create account
       </Button>
     </form>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Field, Alert, Spinner } from "@/components/ui";
+import { Button, Field, Select, Alert, Spinner, Card } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { useRoutes, useRoute } from "@/modules/route/hooks/useRoutes";
 import { calculateFare } from "@/modules/conductor/services/conductor.service";
@@ -97,7 +97,7 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
 
       <Field label="Route" required>
         {({ id }) => (
-          <select
+          <Select
             id={id}
             value={routeId}
             onChange={(e) => {
@@ -105,16 +105,14 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
               setBoardingStop("");
               setDestinationStop("");
               resetQuote();
-            }}
-            className="h-11 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
-          >
+            }}          >
             <option value="">Select a route…</option>
             {(routesQ.data?.routes ?? []).map((r) => (
               <option key={r._id} value={r._id}>
                 {r.routeNumber} — {r.name || r.destination || "route"}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </Field>
 
@@ -128,36 +126,32 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
         <>
           <Field label="Boarding stop" required>
             {({ id }) => (
-              <select
+              <Select
                 id={id}
                 value={boardingStop}
                 onChange={(e) => {
                   setBoardingStop(e.target.value);
                   resetQuote();
-                }}
-                className="h-11 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
-              >
+                }}              >
                 <option value="">Select…</option>
                 {stops.map((s, i) => (
                   <option key={s.stopId} value={s.stopId}>
                     {stopLabel(s, i)}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
           <Field label="Destination stop" required>
             {({ id }) => (
-              <select
+              <Select
                 id={id}
                 value={destinationStop}
                 onChange={(e) => {
                   setDestinationStop(e.target.value);
                   resetQuote();
-                }}
-                className="h-11 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
-              >
+                }}              >
                 <option value="">Select…</option>
                 {stops
                   .filter((s) => s.sequence > boardingSeq)
@@ -166,7 +160,7 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
                       {stopLabel(s, i)}
                     </option>
                   ))}
-              </select>
+              </Select>
             )}
           </Field>
         </>
@@ -174,27 +168,26 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
 
       <Field label="Passenger type" required>
         {({ id }) => (
-          <select
+          <Select
             id={id}
             value={category}
             onChange={(e) => {
               setCategory(e.target.value as PassengerCategory);
               resetQuote();
-            }}
-            className="h-11 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
-          >
+            }}          >
             {PASSENGER_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {CATEGORY_LABEL[c]}
               </option>
             ))}
-          </select>
+          </Select>
         )}
       </Field>
 
       {!quote ? (
         <Button
           type="button"
+          size="xl"
           fullWidth
           loading={quoting}
           disabled={!canQuote}
@@ -204,14 +197,16 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
         </Button>
       ) : (
         <>
-          <div className="rounded-[var(--radius-app)] border p-4">
+          <Card className="p-4">
             <div className="flex items-baseline justify-between">
-              <span className="text-sm text-muted-foreground">Fare</span>
-              <span className="text-xl font-semibold">
+              <span className="text-[13px] font-medium text-muted-foreground">
+                Total fare
+              </span>
+              <span className="tnum text-[22px] font-bold tracking-[-0.02em]">
                 {quote.currency} {quote.amount.toFixed(2)}
               </span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-[12.5px] text-muted-foreground">
               {quote.stopsSpanned} stop{quote.stopsSpanned === 1 ? "" : "s"}
               {quote.distanceKm != null
                 ? ` · ${quote.distanceKm.toFixed(1)} km`
@@ -220,22 +215,20 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
                 ? ` · ${quote.appliedConcession.name} (−${quote.appliedConcession.discountPercent}%)`
                 : ""}
             </p>
-          </div>
+          </Card>
 
           <Field label="Payment" required>
             {({ id }) => (
-              <select
+              <Select
                 id={id}
                 value={method}
-                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-                className="h-11 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
-              >
+                onChange={(e) => setMethod(e.target.value as PaymentMethod)}              >
                 {PAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>
                     {METHOD_LABEL[m]}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
@@ -246,14 +239,21 @@ export function BuyTicketForm({ initialRouteId = "" }: { initialRouteId?: string
             </p>
           )}
 
-          <Button type="button" fullWidth loading={buy.isPending} onClick={submit}>
+          <Button
+            type="button"
+            variant="accent"
+            size="xl"
+            fullWidth
+            loading={buy.isPending}
+            onClick={submit}
+          >
             {ONLINE_METHODS.includes(method)
               ? "Reserve ticket"
               : `Buy ticket · ${quote.currency} ${quote.amount.toFixed(2)}`}
           </Button>
           <button
             type="button"
-            className="text-xs text-muted-foreground underline"
+            className="mx-auto text-[13px] font-medium text-muted-foreground"
             onClick={resetQuote}
           >
             Change trip

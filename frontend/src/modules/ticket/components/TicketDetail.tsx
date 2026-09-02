@@ -1,15 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, FullScreenLoader, Alert } from "@/components/ui";
-import { errorMessage } from "@/lib/error/apiError";
 import {
-  TICKET_STATUS_LABEL,
-  CATEGORY_LABEL,
-} from "../constant/ticket.types";
+  Button,
+  FullScreenLoader,
+  Alert,
+  Card,
+  Badge,
+} from "@/components/ui";
+import { errorMessage } from "@/lib/error/apiError";
+import { TICKET_STATUS_LABEL, CATEGORY_LABEL } from "../constant/ticket.types";
 import { useTicket, useCancelTicket, usePayForTicket } from "../hooks/useTickets";
 import { recallTicketCode } from "../lib/ticketCodeStore";
 import { QrCode } from "./QrCode";
+
+const STATUS_TONE = {
+  CONFIRMED: "success",
+  PENDING_PAYMENT: "warning",
+  USED: "neutral",
+  CANCELLED: "neutral",
+  EXPIRED: "danger",
+} as const;
+
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between py-2.5 text-[14px]">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-medium">{v}</span>
+    </div>
+  );
+}
 
 export function TicketDetail({ id, isNew }: { id: string; isNew?: boolean }) {
   const { data: t, isLoading, error } = useTicket(id);
@@ -39,88 +59,86 @@ export function TicketDetail({ id, isNew }: { id: string; isNew?: boolean }) {
     );
 
   const showQr = t.status === "CONFIRMED" && fullCode;
-  const canCancel =
-    t.status === "CONFIRMED" || t.status === "PENDING_PAYMENT";
+  const canCancel = t.status === "CONFIRMED" || t.status === "PENDING_PAYMENT";
 
   return (
-    <div className="flex flex-col gap-5 p-4">
+    <div className="flex flex-col gap-4 p-4">
       {isNew && t.status === "CONFIRMED" && (
         <Alert tone="success">
-          Ticket confirmed. Show this QR to the conductor — it&apos;s only
-          available on this device.
+          Ticket confirmed. Show this QR to the conductor — it&apos;s only on
+          this device.
         </Alert>
       )}
 
-      <div className="rounded-[var(--radius-app)] border p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold">
+      {/* boarding-pass card */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
+          <span className="text-[15px] font-bold">
             {t.routeNumber ? `Route ${t.routeNumber}` : "Ticket"}
           </span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          <Badge
+            tone={STATUS_TONE[t.status] ?? "neutral"}
+            className="bg-white/15 text-primary-foreground"
+          >
             {TICKET_STATUS_LABEL[t.status] ?? t.status}
-          </span>
+          </Badge>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t.boardingStopName || "—"} → {t.destinationStopName || "—"}
-        </p>
 
-        {showQr ? (
-          <div className="mt-4 flex flex-col items-center gap-2">
-            <QrCode value={fullCode} />
-            <p className="font-mono text-xs tracking-widest text-muted-foreground">
-              {fullCode}
-            </p>
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-2 text-[14px] font-medium">
+            <span className="truncate">{t.boardingStopName || "—"}</span>
+            <span className="text-muted-foreground">→</span>
+            <span className="truncate">{t.destinationStopName || "—"}</span>
           </div>
-        ) : t.status === "CONFIRMED" ? (
-          <p className="mt-4 rounded-[var(--radius-app)] bg-muted p-3 text-center text-xs text-muted-foreground">
-            QR unavailable on this device — reference{" "}
-            <span className="font-mono">···{t.ticketCodeHint}</span>
-          </p>
-        ) : null}
-      </div>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <dt className="text-muted-foreground">Fare</dt>
-        <dd>
-          {t.currency} {t.amount.toFixed(2)}
-          {t.passId ? " (pass)" : ""}
-        </dd>
-        <dt className="text-muted-foreground">Passenger</dt>
-        <dd>{CATEGORY_LABEL[t.passengerCategory] ?? t.passengerCategory}</dd>
-        <dt className="text-muted-foreground">Payment</dt>
-        <dd>{t.paymentMethod}</dd>
-        {t.vehicleRegNo && (
-          <>
-            <dt className="text-muted-foreground">Vehicle</dt>
-            <dd>{t.vehicleRegNo}</dd>
-          </>
-        )}
-        {t.expiresAt && (
-          <>
-            <dt className="text-muted-foreground">Valid until</dt>
-            <dd>{new Date(t.expiresAt).toLocaleString()}</dd>
-          </>
-        )}
-        {t.usedAt && (
-          <>
-            <dt className="text-muted-foreground">Used</dt>
-            <dd>{new Date(t.usedAt).toLocaleString()}</dd>
-          </>
-        )}
-        {t.cancelledAt && (
-          <>
-            <dt className="text-muted-foreground">Cancelled</dt>
-            <dd>{new Date(t.cancelledAt).toLocaleString()}</dd>
-          </>
-        )}
-      </dl>
+          {showQr ? (
+            <div className="mt-4 flex flex-col items-center gap-2 rounded-[var(--radius-app)] bg-muted/60 py-5">
+              <QrCode value={fullCode} />
+              <p className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground">
+                {fullCode}
+              </p>
+            </div>
+          ) : t.status === "CONFIRMED" ? (
+            <p className="mt-4 rounded-[var(--radius-app)] bg-muted p-3 text-center text-[12.5px] text-muted-foreground">
+              QR unavailable on this device — ref{" "}
+              <span className="font-mono">···{t.ticketCodeHint}</span>
+            </p>
+          ) : null}
+        </div>
+
+        <div className="border-t border-dashed px-4 pb-1 pt-1">
+          <Row
+            k="Fare"
+            v={
+              <span className="tnum">
+                {t.currency} {t.amount.toFixed(2)}
+                {t.passId ? " (pass)" : ""}
+              </span>
+            }
+          />
+          <Row
+            k="Passenger"
+            v={CATEGORY_LABEL[t.passengerCategory] ?? t.passengerCategory}
+          />
+          <Row k="Payment" v={t.paymentMethod} />
+          {t.vehicleRegNo && <Row k="Vehicle" v={t.vehicleRegNo} />}
+          {t.expiresAt && (
+            <Row k="Valid until" v={new Date(t.expiresAt).toLocaleString()} />
+          )}
+          {t.usedAt && (
+            <Row k="Used" v={new Date(t.usedAt).toLocaleString()} />
+          )}
+          {t.cancelledAt && (
+            <Row k="Cancelled" v={new Date(t.cancelledAt).toLocaleString()} />
+          )}
+        </div>
+      </Card>
 
       {t.status === "PENDING_PAYMENT" && (
-        <div className="rounded-[var(--radius-app)] border p-4">
-          <p className="text-sm font-medium">Complete payment</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t.currency} {t.amount.toFixed(2)} — confirmation arrives from the
-            payment gateway.
+        <Card className="p-4">
+          <p className="text-[15px] font-semibold">Complete payment</p>
+          <p className="tnum mt-1 text-[13px] text-muted-foreground">
+            {t.currency} {t.amount.toFixed(2)} — confirmed by the gateway.
           </p>
           {pay.isSuccess ? (
             <Alert tone="info" className="mt-3">
@@ -140,7 +158,7 @@ export function TicketDetail({ id, isNew }: { id: string; isNew?: boolean }) {
                       | "WALLET"
                   )
                 }
-                className="mt-3 h-11 w-full rounded-[var(--radius-app)] border bg-card px-3 text-sm"
+                className="mt-3 h-12 w-full rounded-[var(--radius-app)] border bg-card px-3.5 text-[15px]"
               >
                 <option value="UPI">UPI</option>
                 <option value="CARD">Card</option>
@@ -153,8 +171,10 @@ export function TicketDetail({ id, isNew }: { id: string; isNew?: boolean }) {
                 </Alert>
               )}
               <Button
+                variant="accent"
+                size="lg"
+                fullWidth
                 className="mt-3"
-                size="sm"
                 loading={pay.isPending}
                 onClick={() =>
                   pay.mutate({
@@ -168,7 +188,7 @@ export function TicketDetail({ id, isNew }: { id: string; isNew?: boolean }) {
               </Button>
             </>
           )}
-        </div>
+        </Card>
       )}
 
       {canCancel && (
@@ -179,8 +199,10 @@ export function TicketDetail({ id, isNew }: { id: string; isNew?: boolean }) {
             </Alert>
           )}
           <Button
-            variant="destructive"
+            variant="ghost"
+            size="lg"
             fullWidth
+            className="text-destructive"
             loading={cancel.isPending}
             onClick={() => cancel.mutate(undefined)}
           >

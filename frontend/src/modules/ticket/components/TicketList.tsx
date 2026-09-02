@@ -1,7 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { FullScreenLoader, EmptyState, Alert } from "@/components/ui";
+import {
+  EmptyState,
+  Alert,
+  Card,
+  Badge,
+  SkeletonList,
+} from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import {
   TICKET_STATUS_LABEL,
@@ -9,18 +14,21 @@ import {
 } from "../constant/ticket.types";
 import { useMyTickets } from "../hooks/useTickets";
 
-const STATUS_CLASS: Record<TicketStatus, string> = {
-  CONFIRMED: "bg-success/10 text-success",
-  PENDING_PAYMENT: "bg-[color:#d97706]/10 text-[color:#b45309]",
-  USED: "bg-muted text-muted-foreground",
-  CANCELLED: "bg-muted text-muted-foreground",
-  EXPIRED: "bg-muted text-muted-foreground",
+const STATUS_TONE: Record<
+  TicketStatus,
+  "success" | "warning" | "neutral" | "danger"
+> = {
+  CONFIRMED: "success",
+  PENDING_PAYMENT: "warning",
+  USED: "neutral",
+  CANCELLED: "neutral",
+  EXPIRED: "danger",
 };
 
 export function TicketList() {
   const { data, isLoading, error } = useMyTickets();
 
-  if (isLoading) return <FullScreenLoader />;
+  if (isLoading) return <SkeletonList rows={5} />;
   if (error)
     return (
       <div className="p-4">
@@ -38,33 +46,29 @@ export function TicketList() {
     );
 
   return (
-    <ul className="divide-y">
+    <div className="flex flex-col gap-3 p-4">
       {list.map((t) => (
-        <li key={t._id}>
-          <Link href={`/tickets/${t._id}`} className="block p-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium">
-                {t.routeNumber ? `Route ${t.routeNumber}` : "Ticket"}
-              </span>
-              <span
-                className={
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold " +
-                  (STATUS_CLASS[t.status] ?? "bg-muted text-muted-foreground")
-                }
-              >
-                {TICKET_STATUS_LABEL[t.status] ?? t.status}
-              </span>
-            </div>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {t.boardingStopName || "—"} → {t.destinationStopName || "—"}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t.currency} {t.amount.toFixed(2)} ·{" "}
-              {new Date(t.createdAt).toLocaleString()}
-            </p>
-          </Link>
-        </li>
+        <Card key={t._id} href={`/tickets/${t._id}`} interactive className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[15px] font-semibold">
+              {t.routeNumber ? `Route ${t.routeNumber}` : "Ticket"}
+            </span>
+            <Badge tone={STATUS_TONE[t.status] ?? "neutral"}>
+              {TICKET_STATUS_LABEL[t.status] ?? t.status}
+            </Badge>
+          </div>
+          <p className="mt-1 text-[13.5px] text-muted-foreground">
+            {t.boardingStopName || "—"} → {t.destinationStopName || "—"}
+          </p>
+          <p className="tnum mt-2 text-[12.5px] text-muted-foreground">
+            {t.currency} {t.amount.toFixed(2)} ·{" "}
+            {new Date(t.createdAt).toLocaleDateString([], {
+              day: "numeric",
+              month: "short",
+            })}
+          </p>
+        </Card>
       ))}
-    </ul>
+    </div>
   );
 }

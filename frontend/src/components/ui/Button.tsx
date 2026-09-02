@@ -2,31 +2,41 @@ import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 import { Spinner } from "./Spinner";
 
-type Variant = "primary" | "secondary" | "ghost" | "destructive";
-type Size = "sm" | "md" | "lg";
+type Variant =
+  | "primary"
+  | "accent"
+  | "secondary"
+  | "outline"
+  | "ghost"
+  | "destructive";
+type Size = "sm" | "md" | "lg" | "xl";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
   fullWidth?: boolean;
+  pill?: boolean;
 }
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50",
-  secondary:
-    "bg-muted text-foreground hover:bg-border disabled:opacity-50",
-  ghost:
-    "bg-transparent text-foreground hover:bg-muted disabled:opacity-50",
+    "bg-primary text-primary-foreground shadow-[var(--shadow-sm)] hover:brightness-110 active:brightness-95",
+  accent:
+    "bg-accent text-accent-foreground shadow-[var(--shadow-md)] hover:brightness-110 active:brightness-95",
+  secondary: "bg-muted text-foreground hover:bg-border",
+  outline:
+    "border border-border bg-card text-foreground hover:bg-muted",
+  ghost: "bg-transparent text-foreground hover:bg-muted",
   destructive:
-    "bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-50",
+    "bg-destructive text-destructive-foreground shadow-[var(--shadow-sm)] hover:brightness-110 active:brightness-95",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-9 px-3 text-sm",
+  sm: "h-9 px-3.5 text-[13px]",
   md: "h-11 px-4 text-sm",
-  lg: "h-12 px-5 text-base",
+  lg: "h-12 px-5 text-[15px]",
+  xl: "h-14 px-6 text-base",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -36,6 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size = "md",
       loading = false,
       fullWidth = false,
+      pill = false,
       className,
       disabled,
       children,
@@ -47,9 +58,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-[var(--radius-app)] font-medium",
-        "transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "disabled:cursor-not-allowed",
+        "relative inline-flex select-none items-center justify-center gap-2 font-semibold tracking-[-0.01em]",
+        "transition-[transform,filter,background-color,box-shadow] duration-150 outline-none",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45",
+        pill ? "rounded-full" : "rounded-[var(--radius-app)]",
         variants[variant],
         sizes[size],
         fullWidth && "w-full",
@@ -57,7 +70,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       )}
       {...props}
     >
-      {loading && <Spinner />}
+      {loading && <Spinner className="h-[1.05em] w-[1.05em]" />}
       {children}
     </button>
   )

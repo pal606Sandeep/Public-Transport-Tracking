@@ -11,11 +11,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       ref={ref}
       aria-invalid={invalid || undefined}
       className={cn(
-        "h-11 w-full rounded-[var(--radius-app)] border bg-card px-3 text-sm text-foreground",
+        "h-12 w-full rounded-[var(--radius-app)] border bg-card px-3.5 text-[15px] text-foreground",
         "placeholder:text-muted-foreground",
-        "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "outline-none transition-shadow focus-visible:border-ring focus-visible:ring-4 focus-visible:ring-ring/15",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        invalid && "border-destructive focus-visible:ring-destructive",
+        invalid && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/15",
         className
       )}
       {...props}

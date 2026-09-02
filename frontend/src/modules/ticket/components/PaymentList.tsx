@@ -1,6 +1,12 @@
 "use client";
 
-import { FullScreenLoader, EmptyState, Alert } from "@/components/ui";
+import {
+  EmptyState,
+  Alert,
+  Card,
+  Badge,
+  SkeletonList,
+} from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import {
   PAYMENT_STATUS_LABEL,
@@ -8,18 +14,21 @@ import {
 } from "../constant/ticket.types";
 import { useMyPayments } from "../hooks/useTickets";
 
-const STATUS_CLASS: Record<PaymentStatus, string> = {
-  SUCCESS: "bg-success/10 text-success",
-  PENDING: "bg-[color:#d97706]/10 text-[color:#b45309]",
-  FAILED: "bg-destructive/10 text-destructive",
-  REFUND_PENDING: "bg-muted text-muted-foreground",
-  REFUNDED: "bg-muted text-muted-foreground",
+const STATUS_TONE: Record<
+  PaymentStatus,
+  "success" | "warning" | "danger" | "neutral"
+> = {
+  SUCCESS: "success",
+  PENDING: "warning",
+  FAILED: "danger",
+  REFUND_PENDING: "neutral",
+  REFUNDED: "neutral",
 };
 
 export function PaymentList() {
   const { data, isLoading, error } = useMyPayments();
 
-  if (isLoading) return <FullScreenLoader />;
+  if (isLoading) return <SkeletonList rows={5} />;
   if (error)
     return (
       <div className="p-4">
@@ -37,33 +46,31 @@ export function PaymentList() {
     );
 
   return (
-    <ul className="divide-y">
+    <div className="flex flex-col gap-3 p-4">
       {list.map((p) => (
-        <li key={p._id} className="p-4">
+        <Card key={p._id} className="p-4">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium">
+            <span className="tnum text-[15px] font-bold">
               {p.currency} {p.amount.toFixed(2)}
             </span>
-            <span
-              className={
-                "rounded-full px-2 py-0.5 text-[10px] font-semibold " +
-                (STATUS_CLASS[p.status] ?? "bg-muted text-muted-foreground")
-              }
-            >
+            <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>
               {PAYMENT_STATUS_LABEL[p.status] ?? p.status}
-            </span>
+            </Badge>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-[12.5px] text-muted-foreground">
             {p.method} · {p.payableFor} ·{" "}
-            {new Date(p.createdAt).toLocaleString()}
+            {new Date(p.createdAt).toLocaleDateString([], {
+              day: "numeric",
+              month: "short",
+            })}
           </p>
           {p.providerRef && (
-            <p className="font-mono text-xs text-muted-foreground">
+            <p className="mt-0.5 font-mono text-[11.5px] text-muted-foreground">
               {p.providerRef}
             </p>
           )}
-        </li>
+        </Card>
       ))}
-    </ul>
+    </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { PageHeader, Button } from "@/components/ui";
+import { TicketTabs } from "@/modules/ticket/components/TicketTabs";
 import { TicketList } from "@/modules/ticket/components/TicketList";
 
 export default function TicketsPage() {
@@ -11,18 +12,13 @@ export default function TicketsPage() {
         title="Tickets"
         action={
           <Link href="/tickets/buy">
-            <Button size="sm">Buy</Button>
+            <Button size="sm" pill>
+              Buy ticket
+            </Button>
           </Link>
         }
       />
-      <div className="flex gap-4 border-b px-4 py-2 text-sm">
-        <Link href="/passes" className="text-muted-foreground">
-          Passes
-        </Link>
-        <Link href="/payments" className="text-muted-foreground">
-          Payments
-        </Link>
-      </div>
+      <TicketTabs />
       <TicketList />
     </>
   );

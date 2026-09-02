@@ -7,7 +7,6 @@ import maplibregl, {
   LngLatBounds,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useAppSelector } from "@/store/hooks";
 import { styleFor } from "./mapStyle";
 import type { LiveVehicle } from "@/store/slices/liveVehicles.slice";
 
@@ -56,43 +55,76 @@ export function LiveMap({
   const mapRef = useRef<MlMap | null>(null);
   const markers = useRef<Map<string, Marker>>(new Map());
   const readyRef = useRef(false);
-  const tileSource = useAppSelector((s) => s.config.value?.mapTileSource);
 
-  // init once
+  // init — wait until the container actually has a size, then create the map
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    const el = containerRef.current;
+    if (!el || mapRef.current) return;
     const activeMarkers = markers.current;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: styleFor(tileSource),
-      center: [77.59, 12.97],
-      zoom: 11,
-      maxZoom: 18,
-      attributionControl: { compact: true },
-    });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    map.on("load", () => {
-      readyRef.current = true;
-      map.addSource("route", {
-        type: "geojson",
-        data: { type: "Feature", geometry: { type: "LineString", coordinates: [] }, properties: {} },
+    let ro: ResizeObserver | null = null;
+
+    const create = () => {
+      if (mapRef.current || !containerRef.current) return;
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: styleFor(),
+        center: [77.59, 12.97],
+        zoom: 11,
+        maxZoom: 18,
+        attributionControl: { compact: true },
       });
-      map.addLayer({
-        id: "route-line",
-        type: "line",
-        source: "route",
-        paint: { "line-color": "#2563eb", "line-width": 4, "line-opacity": 0.7 },
+      map.addControl(
+        new maplibregl.NavigationControl({ showCompass: false }),
+        "top-right"
+      );
+      map.on("load", () => {
+        readyRef.current = true;
+        map.resize();
+        map.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: [] },
+            properties: {},
+          },
+        });
+        map.addLayer({
+          id: "route-line",
+          type: "line",
+          source: "route",
+          paint: {
+            "line-color": "#2563eb",
+            "line-width": 4,
+            "line-opacity": 0.7,
+          },
+        });
       });
-    });
-    mapRef.current = map;
+      mapRef.current = map;
+      // keep the canvas synced to any later container resize (sheet animating,
+      // fonts settling, orientation change)
+      ro?.disconnect();
+      ro = new ResizeObserver(() => mapRef.current?.resize());
+      ro.observe(containerRef.current);
+    };
+
+    if (el.clientWidth > 0 && el.clientHeight > 0) {
+      create();
+    } else {
+      ro = new ResizeObserver(() => {
+        if (el.clientWidth > 0 && el.clientHeight > 0) create();
+      });
+      ro.observe(el);
+    }
+
     return () => {
+      ro?.disconnect();
       activeMarkers.forEach((m) => m.remove());
       activeMarkers.clear();
-      map.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
       readyRef.current = false;
     };
-  }, [tileSource]);
+  }, []);
 
   // route polyline + fit
   useEffect(() => {
@@ -156,7 +188,7 @@ export function LiveMap({
     <div
       ref={containerRef}
       className={className ?? "h-full w-full"}
-      style={{ minHeight: 240 }}
+      style={{ background: "#e8eaed" }}
     />
   );
 }

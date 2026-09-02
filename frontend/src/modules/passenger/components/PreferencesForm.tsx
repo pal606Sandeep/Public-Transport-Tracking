@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert } from "@/components/ui";
+import { Alert, Card, Skeleton } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { usePassengerProfile, useUpdatePreferences } from "../hooks/usePassenger";
 import type { PassengerNotificationPrefs } from "../constant/passenger.types";
@@ -12,7 +12,7 @@ export function PreferencesForm() {
   const update = useUpdatePreferences();
 
   if (isLoading || !profile) {
-    return <div className="h-40 animate-pulse rounded-[var(--radius-app)] bg-muted" />;
+    return <Skeleton className="h-44 w-full" />;
   }
 
   const prefs = profile.preferences;
@@ -21,16 +21,16 @@ export function PreferencesForm() {
     update.mutate({ notifications: { [key]: value } });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {update.isError && (
         <Alert tone="error">{errorMessage(update.error)}</Alert>
       )}
 
-      <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <section>
+        <h3 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
           Appearance
         </h3>
-        <div className="flex gap-2">
+        <div className="flex gap-1 rounded-full bg-muted p-1">
           {THEMES.map((t) => (
             <button
               key={t}
@@ -38,10 +38,10 @@ export function PreferencesForm() {
               onClick={() => update.mutate({ theme: t })}
               aria-pressed={prefs.theme === t}
               className={
-                "flex-1 rounded-[var(--radius-app)] border px-3 py-2 text-sm capitalize " +
+                "flex-1 rounded-full py-2 text-[13px] font-semibold capitalize transition-colors " +
                 (prefs.theme === t
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "hover:bg-muted")
+                  ? "bg-card text-foreground shadow-[var(--shadow-sm)]"
+                  : "text-muted-foreground")
               }
             >
               {t}
@@ -50,30 +50,32 @@ export function PreferencesForm() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <section>
+        <h3 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
           Notifications
         </h3>
-        {(
-          [
-            ["serviceAlerts", "Service alerts & disruptions"],
-            ["favourites", "Updates for favourite routes & stops"],
-            ["promotions", "Promotions"],
-          ] as [keyof PassengerNotificationPrefs, string][]
-        ).map(([key, label]) => (
-          <label
-            key={key}
-            className="flex items-center justify-between rounded-[var(--radius-app)] border px-3 py-3 text-sm"
-          >
-            <span>{label}</span>
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[var(--primary)]"
-              checked={prefs.notifications?.[key] ?? false}
-              onChange={(e) => setNotif(key, e.target.checked)}
-            />
-          </label>
-        ))}
+        <Card className="divide-y overflow-hidden">
+          {(
+            [
+              ["serviceAlerts", "Service alerts & disruptions"],
+              ["favourites", "Favourite routes & stops"],
+              ["promotions", "Promotions"],
+            ] as [keyof PassengerNotificationPrefs, string][]
+          ).map(([key, label]) => (
+            <label
+              key={key}
+              className="flex items-center justify-between px-4 py-3.5 text-[15px]"
+            >
+              <span>{label}</span>
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-[var(--accent)]"
+                checked={prefs.notifications?.[key] ?? false}
+                onChange={(e) => setNotif(key, e.target.checked)}
+              />
+            </label>
+          ))}
+        </Card>
       </section>
     </div>
   );

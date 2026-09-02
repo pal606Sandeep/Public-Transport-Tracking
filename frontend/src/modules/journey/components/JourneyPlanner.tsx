@@ -1,15 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Alert, EmptyState } from "@/components/ui";
+import { Button, Alert, EmptyState, Card } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { StopSearchInput } from "./StopSearchInput";
 import { JourneyOptionCard } from "./JourneyOptionCard";
 import { usePlanJourney } from "../hooks/useJourney";
-import {
-  endpointToParam,
-  type Endpoint,
-} from "../constant/journey.types";
+import { endpointToParam, type Endpoint } from "../constant/journey.types";
 
 export function JourneyPlanner() {
   const [from, setFrom] = useState<Endpoint | null>(null);
@@ -49,40 +46,47 @@ export function JourneyPlanner() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-col gap-3">
-        <StopSearchInput
-          label="From"
-          value={from}
-          onChange={setFrom}
-          onUseLocation={() => captureLocation(setFrom)}
-        />
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={swap}
-            aria-label="Swap"
-            className="rounded-full border p-1.5 text-muted-foreground hover:text-foreground"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M7 4v13M7 4L3 8M7 4l4 4M17 20V7M17 20l4-4M17 20l-4-4"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+      <Card className="relative overflow-visible">
+        <div className="divide-y">
+          <StopSearchInput
+            label="Pickup stop"
+            marker={
+              <span className="h-2.5 w-2.5 rounded-full border-[3px] border-foreground" />
+            }
+            value={from}
+            onChange={setFrom}
+            onUseLocation={() => captureLocation(setFrom)}
+          />
+          <StopSearchInput
+            label="Destination stop"
+            marker={
+              <span className="h-2.5 w-2.5 rounded-[3px] bg-accent" />
+            }
+            value={to}
+            onChange={setTo}
+            onUseLocation={() => captureLocation(setTo)}
+          />
         </div>
-        <StopSearchInput
-          label="To"
-          value={to}
-          onChange={setTo}
-          onUseLocation={() => captureLocation(setTo)}
-        />
-      </div>
+        <button
+          type="button"
+          onClick={swap}
+          aria-label="Swap pickup and destination"
+          className="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full border border-border bg-elevated text-muted-foreground shadow-[var(--shadow-sm)] transition-transform active:scale-90"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M7 4v13M7 4L3 8M7 4l4 4M17 20V7M17 20l4-4M17 20l-4-4"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </Card>
 
       <Button
+        size="xl"
         fullWidth
         disabled={!from || !to}
         loading={plan.isPending}
@@ -95,7 +99,7 @@ export function JourneyPlanner() {
 
       {result && (
         <section className="flex flex-col gap-3">
-          <p className="text-xs text-muted-foreground">
+          <p className="px-1 text-[12.5px] text-muted-foreground">
             {result.query.from.name} → {result.query.to.name}
             {result.walkingDistanceToFirstStopMeters > 0 &&
               ` · ${result.walkingDistanceToFirstStopMeters} m walk to first stop`}

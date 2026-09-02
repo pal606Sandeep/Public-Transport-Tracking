@@ -15,10 +15,6 @@ interface FieldProps {
 /**
  * Label + control + error/hint. Render-prop passes the generated id and an
  * `invalid` flag to the control.
- *
- *   <Field label="Email" error={errors.email?.message}>
- *     {(p) => <Input type="email" {...p} {...register("email")} />}
- *   </Field>
  */
 export function Field({
   label,
@@ -30,16 +26,19 @@ export function Field({
 }: FieldProps) {
   const id = useId();
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
+    <div className={cn("flex flex-col gap-2", className)}>
+      <label
+        htmlFor={id}
+        className="text-[13px] font-semibold tracking-[-0.01em] text-foreground"
+      >
         {label}
         {required && <span className="text-destructive"> *</span>}
       </label>
       {children({ id, invalid: Boolean(error) })}
       {error ? (
-        <p className="text-xs text-destructive">{error}</p>
+        <p className="text-[12.5px] font-medium text-destructive">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p className="text-[12.5px] text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );

@@ -7,11 +7,11 @@ import { cn } from "@/lib/cn";
 type Item = { href: string; label: string; icon: React.ReactNode; match: RegExp };
 
 const icon = (d: string) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
     <path
       d={d}
       stroke="currentColor"
-      strokeWidth="1.7"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -43,7 +43,9 @@ const ITEMS: Item[] = [
     href: "/favourites",
     label: "Saved",
     match: /^\/favourites/,
-    icon: icon("M12 17.3l-5.5 3 1-6.1L3 9.9l6.1-.9L12 3.5l2.9 5.5 6.1.9-4.5 4.3 1 6.1z"),
+    icon: icon(
+      "M12 17.3l-5.5 3 1-6.1L3 9.9l6.1-.9L12 3.5l2.9 5.5 6.1.9-4.5 4.3 1 6.1z"
+    ),
   },
   {
     href: "/profile",
@@ -58,23 +60,44 @@ const ITEMS: Item[] = [
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="sticky bottom-0 z-10 grid grid-cols-5 border-t bg-card/95 backdrop-blur">
-      {ITEMS.map((item) => {
-        const active = item.match.test(pathname);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex flex-col items-center gap-0.5 py-2 text-[11px]",
-              active ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            {item.icon}
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav
+      className="sticky bottom-0 z-20 border-t bg-card/80 backdrop-blur-xl"
+      style={{ paddingBottom: "var(--safe-b)" }}
+    >
+      <div className="mx-auto grid max-w-md grid-cols-5 px-2 py-1.5">
+        {ITEMS.map((item) => {
+          const active = item.match.test(pathname);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "group flex flex-col items-center gap-1 rounded-[var(--radius-app-sm)] py-1.5",
+                "transition-colors active:scale-[0.94]",
+                active ? "text-foreground" : "text-muted-foreground"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-8 w-14 items-center justify-center rounded-full transition-colors",
+                  active && "bg-muted"
+                )}
+              >
+                {item.icon}
+              </span>
+              <span
+                className={cn(
+                  "text-[11px] leading-none",
+                  active ? "font-semibold" : "font-medium"
+                )}
+              >
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

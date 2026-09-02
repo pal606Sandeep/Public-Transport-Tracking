@@ -2,8 +2,8 @@ import { ListRow } from "@/components/ui";
 import type { Stop } from "../constant/stop.types";
 
 const PinIcon = (
-  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z"
         stroke="currentColor"

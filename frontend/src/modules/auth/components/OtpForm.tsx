@@ -103,10 +103,7 @@ export function OtpForm() {
         </Field>
       )}
 
-      <Button
-        type="submit"
-        fullWidth
-        loading={isSubmitting || requestOtp.isPending || verifyOtp.isPending}
+      <Button type="submit" fullWidth size="xl" loading={isSubmitting || requestOtp.isPending || verifyOtp.isPending}
       >
         {step === "phone" ? "Send code" : "Verify & sign in"}
       </Button>
