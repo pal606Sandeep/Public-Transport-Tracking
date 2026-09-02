@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PageHeader, Input, Alert, EmptyState } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import { useRoutes } from "@/modules/route/hooks/useRoutes";
@@ -22,7 +23,14 @@ export default function RoutesPage() {
   return (
     <>
       <PageHeader title="Routes" />
-      <div className="p-4">
+      <div className="flex flex-col gap-2 p-4">
+        <Link
+          href="/planner"
+          className="flex items-center justify-between rounded-[var(--radius-app)] bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+        >
+          Plan a journey (From → To)
+          <span aria-hidden>→</span>
+        </Link>
         <Input
           placeholder="Search routes"
           value={search}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader, Button } from "@/components/ui";
 import { useSession, useLogout } from "@/modules/auth/hooks/useAuth";
@@ -37,6 +38,60 @@ export default function ProfilePage() {
             </Button>
           )}
         </div>
+
+        <nav className="flex flex-col gap-2">
+          {!isGuest && (
+            <Link
+              href="/notifications"
+              className="flex items-center justify-between rounded-[var(--radius-app)] border px-4 py-3 text-sm font-medium"
+            >
+              Notifications
+              <span aria-hidden className="text-muted-foreground">
+                →
+              </span>
+            </Link>
+          )}
+          <Link
+            href="/alerts"
+            className="flex items-center justify-between rounded-[var(--radius-app)] border px-4 py-3 text-sm font-medium"
+          >
+            Service alerts
+            <span aria-hidden className="text-muted-foreground">
+              →
+            </span>
+          </Link>
+          {!isGuest && (
+            <>
+              <Link
+                href="/tickets"
+                className="flex items-center justify-between rounded-[var(--radius-app)] border px-4 py-3 text-sm font-medium"
+              >
+                Tickets &amp; passes
+                <span aria-hidden className="text-muted-foreground">
+                  →
+                </span>
+              </Link>
+              <Link
+                href="/complaints"
+                className="flex items-center justify-between rounded-[var(--radius-app)] border px-4 py-3 text-sm font-medium"
+              >
+                Complaints
+                <span aria-hidden className="text-muted-foreground">
+                  →
+                </span>
+              </Link>
+              <Link
+                href="/lost-found"
+                className="flex items-center justify-between rounded-[var(--radius-app)] border px-4 py-3 text-sm font-medium"
+              >
+                Lost &amp; found
+                <span aria-hidden className="text-muted-foreground">
+                  →
+                </span>
+              </Link>
+            </>
+          )}
+        </nav>
 
         {!isGuest && (
           <>

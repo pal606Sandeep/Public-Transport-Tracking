@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FullScreenLoader, Alert, RouteBadge } from "@/components/ui";
 import { FavouriteToggle } from "@/modules/passenger/components/FavouriteToggle";
+import { ServiceAlertBanner } from "@/modules/serviceAlert/components/ServiceAlertBanner";
 import { errorMessage } from "@/lib/error/apiError";
 import { useRoute } from "../hooks/useRoutes";
 
@@ -43,6 +44,17 @@ export function RouteDetail({ id }: { id: string }) {
           </p>
         </div>
         <FavouriteToggle type="route" targetId={route._id} />
+      </div>
+
+      <ServiceAlertBanner routeId={route._id} className="p-4 pb-0" />
+
+      <div className="px-4 pt-4">
+        <Link
+          href={`/tickets/buy?route=${route._id}`}
+          className="flex h-11 w-full items-center justify-center rounded-[var(--radius-app)] bg-primary text-sm font-medium text-primary-foreground"
+        >
+          Buy a ticket for this route
+        </Link>
       </div>
 
       <div className="p-4">

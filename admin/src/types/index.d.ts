@@ -4,19 +4,25 @@ export interface ApiResponse<T = unknown> {
   data?: T;
 }
 
-export interface JwtPayload {
-  id: string;
-  role: string;
+export interface ApiErrorShape {
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+  traceId?: string;
+}
+
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages?: number;
 }
 
 export interface AuthUser {
   id: string;
+  _id?: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
   role: string;
-}
-
-export interface Paginated<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
 }
