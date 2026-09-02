@@ -60,6 +60,7 @@ export function LiveMap({
       style: styleFor(),
       center: [77.59, 12.97],
       zoom: 11,
+      maxZoom: 18,
       attributionControl: { compact: true },
     });
     map.addControl(
