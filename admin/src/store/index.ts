@@ -1,10 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import session from "./slices/session.slice";
 import ui from "./slices/ui.slice";
+import liveVehicles from "./slices/liveVehicles.slice";
 
 export const makeStore = () =>
   configureStore({
-    reducer: { session, ui },
+    reducer: { session, ui, liveVehicles },
   });
 
 export const store = makeStore();
