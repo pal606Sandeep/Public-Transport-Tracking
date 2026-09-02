@@ -44,3 +44,26 @@ export const refund = ok(async (req: Request, res: Response): Promise<void> => {
   const result = await svc.refundPayment(parseId(req), reason);
   apiResponse(res, 200, true, "Payment refunded", result);
 });
+
+/* ----------------------------- Admin ----------------------------- */
+
+export const adminList = ok(async (req: Request, res: Response): Promise<void> => {
+  const q = req.query as Record<string, string>;
+  const result = await svc.listAllPayments({
+    page: Number(q.page ?? 1),
+    limit: Math.min(Number(q.limit ?? 20), 100),
+    status: q.status,
+    method: q.method,
+    provider: q.provider,
+    payableFor: q.payableFor,
+    userId: q.userId,
+    from: q.from,
+    to: q.to,
+  });
+  apiResponse(res, 200, true, "Payments", result);
+});
+
+export const adminGet = ok(async (req: Request, res: Response): Promise<void> => {
+  const doc = await svc.getPaymentByIdAdmin(parseId(req));
+  apiResponse(res, 200, true, "Payment", { payment: doc });
+});

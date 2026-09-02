@@ -9,13 +9,18 @@ const DEFAULTS: Record<string, unknown> = {
   supportedLanguages: ["en"],
   minSupportedAppVersion: "1.0.0",
   featureFlags: {},
-  vapidPublicKey: "",
+  // Falls back to the VAPID_PUBLIC_KEY env var so Web Push can be enabled
+  // without a DB write; a `vapidPublicKey` SystemSetting still overrides it.
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY || "",
 };
 
 async function readSettings(): Promise<Record<string, unknown>> {
   const docs = await SystemSetting.find({}).lean();
   const out: Record<string, unknown> = { ...DEFAULTS };
   for (const d of docs) {
+    // An empty stored value shouldn't clobber a non-empty default (e.g. a
+    // seeded `vapidPublicKey: ""` row must not hide the env-provided key).
+    if (d.value === "" && out[d.key as string]) continue;
     out[d.key as string] = d.value;
   }
   return out;

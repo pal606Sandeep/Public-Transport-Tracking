@@ -23,6 +23,8 @@ export default router;
 
 const adminRouter = Router();
 adminRouter.use(authenticate, authorize("MANAGE", "payment"));
+adminRouter.get("/", c.adminList);
+adminRouter.get("/:id", c.adminGet);
 adminRouter.post("/:id/refund", validate(refundPaymentSchema), c.refund);
 
 export { adminRouter as adminPaymentRouter, webhookRouter };

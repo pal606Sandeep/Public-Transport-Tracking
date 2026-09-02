@@ -54,4 +54,9 @@ const publicRouter = Router();
 publicRouter.use(guestOrAuth);
 publicRouter.post("/calculate", validate(calculateFareSchema), c.calculateFare);
 
+// Read-only catalog the PWA needs to render buyable passes and concession
+// discounts. Only active items are returned.
+publicRouter.get("/passes", c.listPublicPasses);
+publicRouter.get("/concessions", c.listPublicConcessions);
+
 export { publicRouter as publicFareRouter };

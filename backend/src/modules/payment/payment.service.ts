@@ -205,6 +205,48 @@ export const listMyPayments = async (input: {
   };
 };
 
+export const listAllPayments = async (input: {
+  page: number;
+  limit: number;
+  status?: string;
+  method?: string;
+  provider?: string;
+  payableFor?: string;
+  userId?: string;
+  from?: string;
+  to?: string;
+}): Promise<unknown> => {
+  const filter: Record<string, unknown> = {};
+  if (input.status) filter.status = input.status;
+  if (input.method) filter.method = input.method;
+  if (input.provider) filter.provider = input.provider;
+  if (input.payableFor) filter.payableFor = input.payableFor;
+  if (input.userId) filter.user = input.userId;
+  if (input.from || input.to) {
+    const range: Record<string, Date> = {};
+    if (input.from) range.$gte = new Date(input.from);
+    if (input.to) range.$lte = new Date(input.to);
+    filter.createdAt = range;
+  }
+
+  const total = await Payment.countDocuments(filter);
+  const docs = await Payment.find(filter)
+    .sort({ createdAt: -1 })
+    .skip((input.page - 1) * input.limit)
+    .limit(input.limit)
+    .lean();
+  return {
+    payments: docs.map(serializePayment),
+    pagination: { page: input.page, limit: input.limit, total, totalPages: Math.ceil(total / input.limit) },
+  };
+};
+
+export const getPaymentByIdAdmin = async (id: string): Promise<unknown> => {
+  const doc = await Payment.findById(id).lean();
+  if (!doc) throw AppError.notFound("Payment not found", "PAYMENT_NOT_FOUND");
+  return serializePayment(doc);
+};
+
 export const getPaymentById = async (userId: string, id: string): Promise<unknown> => {
   const doc = await Payment.findOne({ _id: id, user: userId }).lean();
   if (!doc) throw AppError.notFound("Payment not found", "PAYMENT_NOT_FOUND");

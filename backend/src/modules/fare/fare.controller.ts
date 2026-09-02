@@ -140,3 +140,27 @@ export const calculateFare = ok(async (req: Request, res: Response): Promise<voi
   const result = await svc.calculateFare(req.body as never);
   apiResponse(res, 200, true, "Fare calculated", result);
 });
+
+/* --------------------- Public passenger-facing catalog --------------------- */
+
+export const listPublicPasses = ok(async (req: Request, res: Response): Promise<void> => {
+  const q = req.query as Record<string, string>;
+  const result = await svc.listPasses({
+    page: Number(q.page ?? 1),
+    limit: Math.min(Number(q.limit ?? 100), 100),
+    type: q.type,
+    isActive: "true",
+  });
+  apiResponse(res, 200, true, "Passes", result);
+});
+
+export const listPublicConcessions = ok(async (req: Request, res: Response): Promise<void> => {
+  const q = req.query as Record<string, string>;
+  const result = await svc.listConcessions({
+    page: Number(q.page ?? 1),
+    limit: Math.min(Number(q.limit ?? 100), 100),
+    type: q.type,
+    isActive: "true",
+  });
+  apiResponse(res, 200, true, "Concessions", result);
+});

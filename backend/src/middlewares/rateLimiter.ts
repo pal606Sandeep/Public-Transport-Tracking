@@ -5,12 +5,25 @@ const envelope = (code: string, message: string) => ({
   error: { code, message, traceId: randomUUID() },
 });
 
-/** Global API limiter. */
+const num = (v: string | undefined, fallback: number): number => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+};
+
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
+/**
+ * Global API limiter. Window/limit are env-tunable (RATE_LIMIT_WINDOW_MS,
+ * RATE_LIMIT_MAX). Outside production, loopback traffic is exempt so local
+ * dev (multiple apps + the GPS simulator on 127.0.0.1) doesn't hit 429s.
+ */
 export const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 200,
+  windowMs: num(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
+  limit: num(process.env.RATE_LIMIT_MAX, 200),
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) =>
+    process.env.NODE_ENV !== "production" && LOOPBACK.has(req.ip ?? ""),
   message: envelope("RATE_LIMITED", "Too many requests, please try again later."),
 });
 

@@ -7,6 +7,7 @@ import { Device } from "../../models/device.model.js";
 import { OtpRequest } from "../../models/otpRequest.model.js";
 import { PasswordResetToken } from "../../models/passwordResetToken.model.js";
 import { AppError } from "../../utils/AppError.js";
+import { ROLES } from "../../constants/roles.js";
 import {
   signAccessToken,
   generateRefreshToken,
@@ -30,7 +31,6 @@ export const registerUser = async (input: {
   email: string;
   password: string;
   phone?: string;
-  role?: string;
 }): Promise<{ user: unknown }> => {
   const email = input.email.toLowerCase();
   const exists = await User.findOne({ email, deletedAt: null });
@@ -38,7 +38,9 @@ export const registerUser = async (input: {
     throw AppError.conflict("Email already registered", "EMAIL_IN_USE");
   }
 
-  const role = input.role || "PASSENGER";
+  // Public self-registration is always a PASSENGER. Staff/admin accounts are
+  // provisioned only through the admin user-management endpoints.
+  const role = ROLES.PASSENGER;
   const user = await User.create({
     name: input.name,
     email,

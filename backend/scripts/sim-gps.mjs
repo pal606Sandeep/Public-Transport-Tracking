@@ -5,8 +5,8 @@
  *
  * Env (all optional):
  *   API   base url          default http://localhost:5000/api/v1
- *   EMAIL admin login       default admin@transit.local
- *   PASS  admin password    default ChangeMe123!
+ *   EMAIL admin login       default $ADMIN_EMAIL or admin@transit.test
+ *   PASS  admin password    default $ADMIN_PASSWORD or AdminPass123!
  *   STEP  seconds per fix   default 4
  *   SPEED metres per step   default 60   (~54 km/h; keep under ~110 km/h)
  *
@@ -16,8 +16,8 @@
  */
 
 const API = process.env.API || "http://localhost:5000/api/v1";
-const EMAIL = process.env.EMAIL || "admin@transit.local";
-const PASS = process.env.PASS || "ChangeMe123!";
+const EMAIL = process.env.EMAIL || process.env.ADMIN_EMAIL || "admin@transit.test";
+const PASS = process.env.PASS || process.env.ADMIN_PASSWORD || "AdminPass123!";
 const STEP_S = Number(process.env.STEP || 4);
 const SPEED_M = Number(process.env.SPEED || 60);
 

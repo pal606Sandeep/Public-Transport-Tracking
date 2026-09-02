@@ -64,7 +64,7 @@ const DEFAULT_SYSTEM_SETTINGS = [
     key: "featureFlags",
     value: { preTripChecklist: true, liveTracking: true },
   },
-  { key: "vapidPublicKey", value: "" },
+  { key: "vapidPublicKey", value: process.env.VAPID_PUBLIC_KEY || "" },
 ];
 
 async function seedPermissions(db: mongoose.mongo.Db): Promise<string[]> {
@@ -137,6 +137,213 @@ async function seedAdminUser(db: mongoose.mongo.Db): Promise<void> {
   logger.info(`Admin user created: ${adminEmail} (SUPER_ADMIN)`);
 }
 
+/**
+ * A tiny but complete demo network so the stack is usable straight after a
+ * seed — no GPS simulator required. Everything is upserted on a natural key
+ * (stop code / route number / registration number / schedule code), so
+ * re-running the seed is safe and won't duplicate rows.
+ *
+ * Skip with SEED_NETWORK=false.
+ */
+
+// A short arc through central Bengaluru: [lng, lat]. Matches scripts/sim-gps.mjs
+// so the simulator and the seeded network sit on the same map.
+const LINE: [number, number][] = [
+  [77.5946, 12.9716],
+  [77.6033, 12.9762],
+  [77.6101, 12.9784],
+  [77.6169, 12.9723],
+  [77.6212, 12.9665],
+  [77.6278, 12.9611],
+];
+
+const STOP_NAMES = [
+  "Majestic",
+  "Cubbon Park",
+  "MG Road",
+  "Trinity",
+  "Halasuru",
+  "Indiranagar",
+];
+
+async function upsertGetId(
+  col: mongoose.mongo.Collection,
+  match: Record<string, unknown>,
+  doc: Record<string, unknown>
+): Promise<mongoose.mongo.BSON.ObjectId> {
+  const now = new Date();
+  await col.updateOne(
+    match,
+    { $setOnInsert: { ...doc, createdAt: now, updatedAt: now } },
+    { upsert: true }
+  );
+  const found = await col.findOne(match, { projection: { _id: 1 } });
+  return found!._id as mongoose.mongo.BSON.ObjectId;
+}
+
+async function seedNetwork(db: mongoose.mongo.Db): Promise<void> {
+  if ((process.env.SEED_NETWORK || "true").toLowerCase() === "false") {
+    logger.info("Network seed skipped (SEED_NETWORK=false)");
+    return;
+  }
+
+  const stops = db.collection("stops");
+  const routes = db.collection("routes");
+  const vehicles = db.collection("vehicles");
+  const schedules = db.collection("schedules");
+  const fareRules = db.collection("farerules");
+  const fares = db.collection("fares");
+  const passes = db.collection("passes");
+  const concessions = db.collection("concessions");
+
+  // Stops
+  const stopIds: mongoose.mongo.BSON.ObjectId[] = [];
+  for (let i = 0; i < LINE.length; i++) {
+    const code = `SEED-S${i + 1}`;
+    const id = await upsertGetId(stops, { code }, {
+      name: STOP_NAMES[i],
+      code,
+      location: { type: "Point", coordinates: LINE[i] },
+      accessibility: i % 2 === 0,
+      isActive: true,
+      deletedAt: null,
+    });
+    stopIds.push(id);
+  }
+
+  // Forward + reverse route
+  const mkOrdered = (ids: mongoose.mongo.BSON.ObjectId[]) =>
+    ids.map((stopId, seq) => ({ stopId, sequence: seq, scheduledOffsetMinutes: seq * 4 }));
+
+  const fwdId = await upsertGetId(routes, { routeNumber: "S1" }, {
+    routeNumber: "S1",
+    name: "Majestic → Indiranagar",
+    status: "ACTIVE",
+    source: stopIds[0],
+    destination: stopIds[stopIds.length - 1],
+    distanceKm: 8.5,
+    estimatedDurationMin: 24,
+    direction: "UP",
+    geometry: { type: "LineString", coordinates: LINE },
+    orderedStops: mkOrdered(stopIds),
+    stops: stopIds,
+    deletedAt: null,
+  });
+
+  const revStops = [...stopIds].reverse();
+  const revId = await upsertGetId(routes, { routeNumber: "S1R" }, {
+    routeNumber: "S1R",
+    name: "Indiranagar → Majestic",
+    status: "ACTIVE",
+    source: revStops[0],
+    destination: revStops[revStops.length - 1],
+    distanceKm: 8.5,
+    estimatedDurationMin: 24,
+    direction: "DOWN",
+    geometry: { type: "LineString", coordinates: [...LINE].reverse() },
+    orderedStops: mkOrdered(revStops),
+    stops: revStops,
+    deletedAt: null,
+  });
+
+  // Back-link stops -> routes
+  await stops.updateMany({ _id: { $in: stopIds } }, { $addToSet: { routes: fwdId } });
+  await stops.updateMany({ _id: { $in: revStops } }, { $addToSet: { routes: revId } });
+
+  // Vehicles
+  const vehicleIds: mongoose.mongo.BSON.ObjectId[] = [];
+  const vehicleSpecs = [
+    { registrationNumber: "KA01-F-1001", type: "BUS", capacity: 40, assignedRoute: fwdId },
+    { registrationNumber: "KA01-F-1002", type: "BUS", capacity: 40, assignedRoute: revId },
+    { registrationNumber: "KA01-F-1003", type: "MINIBUS", capacity: 22, assignedRoute: fwdId },
+  ];
+  for (const spec of vehicleSpecs) {
+    const id = await upsertGetId(vehicles, { registrationNumber: spec.registrationNumber }, {
+      ...spec,
+      status: "ACTIVE",
+      wheelchairAccessible: spec.capacity >= 40,
+      deletedAt: null,
+    });
+    vehicleIds.push(id);
+  }
+
+  // Schedules
+  await upsertGetId(schedules, { code: "SEED-SCH-S1" }, {
+    name: "S1 Weekday",
+    code: "SEED-SCH-S1",
+    route: fwdId,
+    vehicle: vehicleIds[0],
+    frequencyType: "WEEKLY",
+    daysOfWeek: [1, 2, 3, 4, 5],
+    departureTimes: ["06:00", "06:30", "07:00", "07:30", "08:00", "09:00", "17:00", "18:00", "19:00"],
+    durationMin: 24,
+    isActive: true,
+    deletedAt: null,
+  });
+  await upsertGetId(schedules, { code: "SEED-SCH-S1R" }, {
+    name: "S1R Weekday",
+    code: "SEED-SCH-S1R",
+    route: revId,
+    vehicle: vehicleIds[1],
+    frequencyType: "WEEKLY",
+    daysOfWeek: [1, 2, 3, 4, 5],
+    departureTimes: ["06:15", "06:45", "07:15", "07:45", "08:15", "09:15", "17:15", "18:15", "19:15"],
+    durationMin: 24,
+    isActive: true,
+    deletedAt: null,
+  });
+
+  // Fare rule + a couple of flat route fares
+  await upsertGetId(fareRules, { name: "Standard" }, {
+    name: "Standard",
+    description: "Default distance-based fare rule.",
+    baseFare: 10,
+    perStopFare: 2,
+    perKmFare: 1.5,
+    minimumFare: 10,
+    currency: "INR",
+    acceptedPaymentMethods: ["QR", "CASH", "CARD", "UPI"],
+    isActive: true,
+    deletedAt: null,
+  });
+  await upsertGetId(fares, { name: "S1 flat" }, {
+    name: "S1 flat", type: "ROUTE", route: fwdId, amount: 25, priority: 1, isActive: true, deletedAt: null,
+  });
+  await upsertGetId(fares, { name: "S1R flat" }, {
+    name: "S1R flat", type: "ROUTE", route: revId, amount: 25, priority: 1, isActive: true, deletedAt: null,
+  });
+
+  // Buyable passes (surfaced by GET /fares/passes)
+  const passSpecs = [
+    { name: "Day Pass", type: "DAILY", price: 60, durationDays: 1 },
+    { name: "Weekly Pass", type: "WEEKLY", price: 300, durationDays: 7 },
+    { name: "Monthly Pass", type: "MONTHLY", price: 1000, durationDays: 30 },
+    { name: "Student Monthly", type: "STUDENT", price: 500, durationDays: 30 },
+  ];
+  for (const p of passSpecs) {
+    await upsertGetId(passes, { name: p.name }, {
+      ...p, currency: "INR", unlimited: true, isActive: true, validFrom: null, validTo: null, deletedAt: null,
+    });
+  }
+
+  // Concessions (surfaced by GET /fares/concessions)
+  const concessionSpecs = [
+    { name: "Student", code: "STUDENT", type: "STUDENT", discountPercent: 50 },
+    { name: "Senior Citizen", code: "SENIOR", type: "SENIOR", discountPercent: 40 },
+    { name: "Disabled", code: "DISABLED", type: "DISABLED", discountPercent: 100 },
+  ];
+  for (const c of concessionSpecs) {
+    await upsertGetId(concessions, { code: c.code }, {
+      ...c, isActive: true, validFrom: null, validTo: null, maxPerDay: null, deletedAt: null,
+    });
+  }
+
+  logger.info(
+    `Network ensured: ${stopIds.length} stops, 2 routes, ${vehicleIds.length} vehicles, 2 schedules, ` +
+      `${passSpecs.length} passes, ${concessionSpecs.length} concessions`
+  );
+}
+
 async function seed(uri?: string): Promise<void> {
   if (uri) {
     process.env.MONGO_URI = uri;
@@ -152,6 +359,7 @@ async function seed(uri?: string): Promise<void> {
   await seedRoles(db);
   await seedSystemSettings(db);
   await seedAdminUser(db);
+  await seedNetwork(db);
 
   await mongoose.disconnect();
   logger.info("Seed complete");
