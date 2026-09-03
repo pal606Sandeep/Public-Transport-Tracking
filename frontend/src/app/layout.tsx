@@ -6,6 +6,10 @@ import "./globals.css";
 import Providers from "./providers";
 import { BootstrapGate } from "@/components/BootstrapGate";
 import { PwaManager } from "@/components/pwa/PwaManager";
+import { ThemeManager } from "@/components/theme/ThemeManager";
+
+/** Runs before first paint: applies the saved theme so there's no light flash. */
+const themeBootScript = `(function(){try{var t=localStorage.getItem('theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var e=document.documentElement;if(t==='system'){e.removeAttribute('data-theme');}else{e.setAttribute('data-theme',t);}e.style.colorScheme=d?'dark':'light';}catch(_){}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,11 +53,17 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: themeBootScript }}
+        />
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
+        <ThemeManager />
         <NextIntlClientProvider>
           <Providers>
             <BootstrapGate>{children}</BootstrapGate>

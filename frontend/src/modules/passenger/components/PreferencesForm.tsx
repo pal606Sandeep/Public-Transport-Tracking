@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { Alert, Card, Skeleton } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
+import { applyTheme, type ThemePref } from "@/lib/theme";
 import { usePassengerProfile, useUpdatePreferences } from "../hooks/usePassenger";
 import type { PassengerNotificationPrefs } from "../constant/passenger.types";
 
@@ -11,11 +13,23 @@ export function PreferencesForm() {
   const { data: profile, isLoading } = usePassengerProfile();
   const update = useUpdatePreferences();
 
+  // The server profile is the cross-device source of truth: mirror it onto this
+  // device whenever it loads or changes elsewhere.
+  const serverTheme = profile?.preferences.theme;
+  useEffect(() => {
+    if (serverTheme) applyTheme(serverTheme);
+  }, [serverTheme]);
+
   if (isLoading || !profile) {
     return <Skeleton className="h-44 w-full" />;
   }
 
   const prefs = profile.preferences;
+
+  const chooseTheme = (t: ThemePref) => {
+    applyTheme(t); // instant, optimistic
+    update.mutate({ theme: t });
+  };
 
   const setNotif = (key: keyof PassengerNotificationPrefs, value: boolean) =>
     update.mutate({ notifications: { [key]: value } });
@@ -35,7 +49,7 @@ export function PreferencesForm() {
             <button
               key={t}
               type="button"
-              onClick={() => update.mutate({ theme: t })}
+              onClick={() => chooseTheme(t)}
               aria-pressed={prefs.theme === t}
               className={
                 "flex-1 rounded-full py-2 text-[13px] font-semibold capitalize transition-colors " +

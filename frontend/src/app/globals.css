@@ -39,8 +39,11 @@
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 
+/* Dark palette. Applied when the OS asks for dark AND the user hasn't forced
+ * light, OR when the user has explicitly chosen dark. The two selectors below
+ * carry the same declarations (CSS has no way to share a block). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0a0a0c;
     --foreground: #f4f4f6;
     --card: #141417;
@@ -65,6 +68,32 @@
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
     --shadow-xl: 0 24px 56px rgba(0, 0, 0, 0.6);
   }
+}
+
+:root[data-theme="dark"] {
+  --background: #0a0a0c;
+  --foreground: #f4f4f6;
+  --card: #141417;
+  --elevated: #1b1b1f;
+  --border: #242428;
+  --muted: #1e1e22;
+  --muted-foreground: #9a9aa4;
+
+  --primary: #f4f4f6;
+  --primary-foreground: #0a0a0c;
+  --accent: #5b73ff;
+  --accent-foreground: #ffffff;
+  --ring: #5b73ff;
+
+  --destructive: #ff6369;
+  --destructive-foreground: #0a0a0c;
+  --success: #2fd47f;
+  --warning: #ffb84d;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-xl: 0 24px 56px rgba(0, 0, 0, 0.6);
 }
 
 @theme inline {

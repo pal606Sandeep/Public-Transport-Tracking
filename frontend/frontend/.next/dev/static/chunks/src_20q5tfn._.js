@@ -1275,15 +1275,19 @@ __turbopack_context__.s([
     ()=>PreferencesForm
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$index$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/src/components/ui/index.ts [app-client] (ecmascript) <locals>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$Alert$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/Alert.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$Card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/Card.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$Skeleton$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/Skeleton.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$error$2f$apiError$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/error/apiError.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$theme$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/theme.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$modules$2f$passenger$2f$hooks$2f$usePassenger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/modules/passenger/hooks/usePassenger.ts [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 "use client";
+;
+;
 ;
 ;
 ;
@@ -1296,16 +1300,32 @@ function PreferencesForm() {
     _s();
     const { data: profile, isLoading } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$modules$2f$passenger$2f$hooks$2f$usePassenger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePassengerProfile"])();
     const update = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$modules$2f$passenger$2f$hooks$2f$usePassenger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useUpdatePreferences"])();
+    // The server profile is the cross-device source of truth: mirror it onto this
+    // device whenever it loads or changes elsewhere.
+    const serverTheme = profile?.preferences.theme;
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "PreferencesForm.useEffect": ()=>{
+            if (serverTheme) (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$theme$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["applyTheme"])(serverTheme);
+        }
+    }["PreferencesForm.useEffect"], [
+        serverTheme
+    ]);
     if (isLoading || !profile) {
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$Skeleton$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Skeleton"], {
             className: "h-44 w-full"
         }, void 0, false, {
             fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-            lineNumber: 15,
+            lineNumber: 24,
             columnNumber: 12
         }, this);
     }
     const prefs = profile.preferences;
+    const chooseTheme = (t)=>{
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$theme$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["applyTheme"])(t); // instant, optimistic
+        update.mutate({
+            theme: t
+        });
+    };
     const setNotif = (key, value)=>update.mutate({
             notifications: {
                 [key]: value
@@ -1319,7 +1339,7 @@ function PreferencesForm() {
                 children: (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$error$2f$apiError$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["errorMessage"])(update.error)
             }, void 0, false, {
                 fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                lineNumber: 26,
+                lineNumber: 40,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -1329,33 +1349,31 @@ function PreferencesForm() {
                         children: "Appearance"
                     }, void 0, false, {
                         fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                        lineNumber: 30,
+                        lineNumber: 44,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex gap-1 rounded-full bg-muted p-1",
                         children: THEMES.map((t)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                 type: "button",
-                                onClick: ()=>update.mutate({
-                                        theme: t
-                                    }),
+                                onClick: ()=>chooseTheme(t),
                                 "aria-pressed": prefs.theme === t,
                                 className: "flex-1 rounded-full py-2 text-[13px] font-semibold capitalize transition-colors " + (prefs.theme === t ? "bg-card text-foreground shadow-[var(--shadow-sm)]" : "text-muted-foreground"),
                                 children: t
                             }, t, false, {
                                 fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                                lineNumber: 35,
+                                lineNumber: 49,
                                 columnNumber: 13
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                        lineNumber: 33,
+                        lineNumber: 47,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                lineNumber: 29,
+                lineNumber: 43,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -1365,7 +1383,7 @@ function PreferencesForm() {
                         children: "Notifications"
                     }, void 0, false, {
                         fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                        lineNumber: 54,
+                        lineNumber: 68,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$Card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -1390,7 +1408,7 @@ function PreferencesForm() {
                                         children: label
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                                        lineNumber: 69,
+                                        lineNumber: 83,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1400,34 +1418,34 @@ function PreferencesForm() {
                                         onChange: (e)=>setNotif(key, e.target.checked)
                                     }, void 0, false, {
                                         fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                                        lineNumber: 70,
+                                        lineNumber: 84,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, key, true, {
                                 fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                                lineNumber: 65,
+                                lineNumber: 79,
                                 columnNumber: 13
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                        lineNumber: 57,
+                        lineNumber: 71,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-                lineNumber: 53,
+                lineNumber: 67,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/modules/passenger/components/PreferencesForm.tsx",
-        lineNumber: 24,
+        lineNumber: 38,
         columnNumber: 5
     }, this);
 }
-_s(PreferencesForm, "Qxz4Pg7PjaZu6Alo4EpVN49iowk=", false, function() {
+_s(PreferencesForm, "opd/mlFWyr6YtKP5ubuO1cskkTI=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$modules$2f$passenger$2f$hooks$2f$usePassenger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePassengerProfile"],
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$modules$2f$passenger$2f$hooks$2f$usePassenger$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useUpdatePreferences"]
