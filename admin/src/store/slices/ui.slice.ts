@@ -5,7 +5,9 @@ interface UiState {
 }
 
 const initialState: UiState = {
-  sidebarOpen: true,
+  // Closed by default so mobile doesn't start with the drawer covering content.
+  // The shell opens it on mount when the viewport is desktop-width.
+  sidebarOpen: false,
 };
 
 const uiSlice = createSlice({

@@ -19,20 +19,22 @@ export function Topbar() {
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-surface px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-surface px-3 sm:px-4">
       <button
         type="button"
         onClick={() => dispatch(sidebarToggled())}
         className="rounded-md p-2 text-muted-foreground hover:bg-muted"
-        aria-label="Toggle sidebar"
+        aria-label="Toggle menu"
       >
         <span className="block h-0.5 w-5 bg-current shadow-[0_6px_0_currentColor,0_-6px_0_currentColor]" />
       </button>
 
-      <div className="flex items-center gap-3">
-        <div className="text-right leading-tight">
-          <p className="text-sm font-medium">{user?.name || user?.email}</p>
-          <p className="text-xs text-muted-foreground">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="hidden min-w-0 text-right leading-tight sm:block">
+          <p className="truncate text-sm font-medium">
+            {user?.name || user?.email}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
             {user ? ROLE_LABEL[user.role] ?? user.role : ""}
           </p>
         </div>
