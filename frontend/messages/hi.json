@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "map": "मानचित्र",
+    "routes": "मार्ग",
+    "stops": "स्टॉप",
+    "saved": "सहेजे गए",
+    "profile": "प्रोफ़ाइल"
+  },
+  "common": {
+    "back": "वापस",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "retry": "पुनः प्रयास",
+    "close": "बंद करें",
+    "search": "खोजें",
+    "loading": "लोड हो रहा है…",
+    "signIn": "साइन इन",
+    "signOut": "साइन आउट",
+    "offline": "आप ऑफ़लाइन हैं — सहेजा गया डेटा दिखाया जा रहा है"
+  },
+  "profile": {
+    "title": "प्रोफ़ाइल",
+    "guest": "अतिथि के रूप में देख रहे हैं",
+    "createAccount": "खाता बनाएँ",
+    "notifications": "सूचनाएँ",
+    "ticketsPasses": "टिकट और पास",
+    "serviceAlerts": "सेवा अलर्ट",
+    "complaints": "शिकायतें",
+    "lostFound": "खोया-पाया",
+    "language": "भाषा",
+    "appearance": "दिखावट",
+    "exitGuest": "अतिथि सत्र समाप्त करें"
+  },
+  "install": {
+    "title": "Transit इंस्टॉल करें",
+    "bodyAndroid": "पूर्ण-स्क्रीन, ऑफ़लाइन उपयोग के लिए इसे होम स्क्रीन पर जोड़ें।",
+    "bodyIOS": "शेयर बटन दबाएँ, फिर “Add to Home Screen” चुनें।",
+    "action": "इंस्टॉल",
+    "dismiss": "इंस्टॉल संकेत बंद करें"
+  }
+}

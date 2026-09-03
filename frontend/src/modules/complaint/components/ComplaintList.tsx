@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { EmptyState, Alert, Card, Badge, SkeletonList } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
 import {
@@ -21,6 +22,7 @@ const STATUS_TONE: Record<
 
 export function ComplaintList() {
   const { data, isLoading, error } = useMyComplaints();
+  const queued = useSearchParams().get("queued") === "1";
 
   if (isLoading) return <SkeletonList rows={4} />;
   if (error)
@@ -30,18 +32,32 @@ export function ComplaintList() {
       </div>
     );
 
+  const queuedBanner = queued ? (
+    <div className="px-4 pt-4">
+      <Alert tone="success">
+        Saved. Your complaint will be submitted automatically when you&apos;re
+        back online.
+      </Alert>
+    </div>
+  ) : null;
+
   const complaints = data?.complaints ?? [];
   if (complaints.length === 0)
     return (
-      <EmptyState
-        title="No complaints yet"
-        hint="Report a problem with a bus, driver, or route and track it here."
-      />
+      <>
+        {queuedBanner}
+        <EmptyState
+          title="No complaints yet"
+          hint="Report a problem with a bus, driver, or route and track it here."
+        />
+      </>
     );
 
   return (
-    <div className="flex flex-col gap-3 p-4">
-      {complaints.map((c) => (
+    <>
+      {queuedBanner}
+      <div className="flex flex-col gap-3 p-4">
+        {complaints.map((c) => (
         <Card
           key={c._id}
           href={`/complaints/${c._id}`}
@@ -66,8 +82,9 @@ export function ComplaintList() {
               month: "short",
             })}
           </p>
-        </Card>
-      ))}
-    </div>
+          </Card>
+        ))}
+      </div>
+    </>
   );
 }

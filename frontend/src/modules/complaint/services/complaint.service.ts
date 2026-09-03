@@ -2,11 +2,22 @@ import { api } from "@/utils/apiClient";
 import type { Pagination } from "@/types";
 import type { Complaint, CreateComplaintInput } from "../constant/complaint.types";
 
+export type CreateComplaintResult =
+  | { queued: false; complaint: Complaint }
+  | { queued: true };
+
 export const createComplaint = async (
   input: CreateComplaintInput
-): Promise<Complaint> => {
-  const res = await api.post<{ complaint: Complaint }>("/complaints", input);
-  return (res.data as { complaint: Complaint }).complaint;
+): Promise<CreateComplaintResult> => {
+  const res = await api.post<{ complaint: Complaint }>("/complaints", input, {
+    queueOffline: true,
+    queueLabel: "Complaint",
+  });
+  if ((res as { queued?: boolean }).queued) return { queued: true };
+  return {
+    queued: false,
+    complaint: (res.data as { complaint: Complaint }).complaint,
+  };
 };
 
 export const listMyComplaints = async (params: {

@@ -18,8 +18,11 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
   }, [status, role, router]);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6 py-12">
+    <main
+      id="main-content"
+      className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-6 py-12"
+    >
       {children}
-    </div>
+    </main>
   );
 }

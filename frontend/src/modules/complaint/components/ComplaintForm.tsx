@@ -38,18 +38,23 @@ export function ComplaintForm() {
     }
     try {
       let attachmentKeys: string[] | undefined;
-      if (files.length) {
+      // Photo upload needs the network; skip it when offline and queue the text.
+      if (files.length && navigator.onLine) {
         setUploading(true);
         attachmentKeys = await uploadMany(files, "complaint");
         setUploading(false);
       }
-      const complaint = await create.mutateAsync({
+      const result = await create.mutateAsync({
         category,
         subject: subject.trim(),
         description: description.trim(),
         attachmentKeys,
       });
-      router.replace(`/complaints/${complaint._id}`);
+      if (result.queued) {
+        router.replace("/complaints?queued=1");
+        return;
+      }
+      router.replace(`/complaints/${result.complaint._id}`);
     } catch (err) {
       setUploading(false);
       setLocalError(errorMessage(err));

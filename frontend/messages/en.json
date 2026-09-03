@@ -1,0 +1,41 @@
+{
+  "nav": {
+    "map": "Map",
+    "routes": "Routes",
+    "stops": "Stops",
+    "saved": "Saved",
+    "profile": "Profile"
+  },
+  "common": {
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "close": "Close",
+    "search": "Search",
+    "loading": "Loading…",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "offline": "You're offline — showing saved data"
+  },
+  "profile": {
+    "title": "Profile",
+    "guest": "Browsing as guest",
+    "createAccount": "Create an account",
+    "notifications": "Notifications",
+    "ticketsPasses": "Tickets & passes",
+    "serviceAlerts": "Service alerts",
+    "complaints": "Complaints",
+    "lostFound": "Lost & found",
+    "language": "Language",
+    "appearance": "Appearance",
+    "exitGuest": "Exit guest session"
+  },
+  "install": {
+    "title": "Install Transit",
+    "bodyAndroid": "Add it to your home screen for full-screen, offline access.",
+    "bodyIOS": "Tap the Share button, then “Add to Home Screen”.",
+    "action": "Install",
+    "dismiss": "Dismiss install prompt"
+  }
+}

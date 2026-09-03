@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
-import { PageHeader, Button } from "@/components/ui";
+import { PageHeader, Button, SkeletonList } from "@/components/ui";
 import { ComplaintList } from "@/modules/complaint/components/ComplaintList";
 
 export default function ComplaintsPage() {
@@ -16,7 +17,9 @@ export default function ComplaintsPage() {
           </Link>
         }
       />
-      <ComplaintList />
+      <Suspense fallback={<SkeletonList rows={4} />}>
+        <ComplaintList />
+      </Suspense>
     </>
   );
 }

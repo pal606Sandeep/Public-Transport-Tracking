@@ -6,7 +6,10 @@ export default function PassengerLayout({ children }: { children: ReactNode }) {
   return (
     <RequireArea area="passenger">
       <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-hidden">
-        <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <main
+          id="main-content"
+          className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
+        >
           {children}
         </main>
         <BottomNav />

@@ -2,12 +2,30 @@
 
 import { useState } from "react";
 import { API_BASE_URL } from "@/config/env.config";
-import { Button, FullScreenLoader, Alert } from "@/components/ui";
+import {
+  Button,
+  FullScreenLoader,
+  Alert,
+  Card,
+  Badge,
+  Textarea,
+} from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
-import { CATEGORY_LABEL } from "../constant/complaint.types";
+import { CATEGORY_LABEL, type ComplaintStatus } from "../constant/complaint.types";
 import { useComplaint, useComplaintFeedback } from "../hooks/useComplaints";
 
 const ORIGIN = API_BASE_URL.replace(/\/api\/v\d+\/?$/, "");
+
+const STATUS_TONE: Record<
+  ComplaintStatus,
+  "neutral" | "accent" | "danger" | "success"
+> = {
+  OPEN: "neutral",
+  IN_PROGRESS: "accent",
+  ESCALATED: "danger",
+  RESOLVED: "success",
+  CLOSED: "neutral",
+};
 
 export function ComplaintDetail({ id }: { id: string }) {
   const { data: c, isLoading, error } = useComplaint(id);
@@ -26,56 +44,59 @@ export function ComplaintDetail({ id }: { id: string }) {
   const canRate = c.status === "RESOLVED" || c.status === "CLOSED";
 
   return (
-    <div className="flex flex-col gap-5 p-4">
-      <div>
+    <div className="flex flex-col gap-4 p-4">
+      <Card className="p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-[12px] font-medium text-muted-foreground">
             {CATEGORY_LABEL[c.category] ?? c.category}
           </span>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          <Badge tone={STATUS_TONE[c.status] ?? "neutral"}>
             {c.status.replace("_", " ")}
-          </span>
+          </Badge>
         </div>
-        <h2 className="mt-1 text-lg font-semibold">{c.subject}</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <h2 className="mt-1.5 text-[19px] font-bold tracking-[-0.01em]">
+          {c.subject}
+        </h2>
+        <p className="mt-1 text-[12.5px] text-muted-foreground">
           Filed {new Date(c.createdAt).toLocaleString()} · Priority{" "}
           {c.priority.toLowerCase()}
           {c.escalationLevel > 0 ? ` · escalated ×${c.escalationLevel}` : ""}
         </p>
-      </div>
+        <p className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed">
+          {c.description}
+        </p>
 
-      <p className="whitespace-pre-wrap text-sm">{c.description}</p>
-
-      {c.attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {c.attachments.map((a) => (
-            <a
-              key={a.key}
-              href={`${ORIGIN}/uploads/${a.key}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-[var(--radius-app)] border px-3 py-2 text-xs text-primary"
-            >
-              View attachment
-            </a>
-          ))}
-        </div>
-      )}
+        {c.attachments.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {c.attachments.map((a) => (
+              <a
+                key={a.key}
+                href={`${ORIGIN}/uploads/${a.key}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium text-accent"
+              >
+                View attachment
+              </a>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {c.resolution?.note && (
-        <div className="rounded-[var(--radius-app)] border border-success/40 bg-success/10 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-success">
+        <Card className="border-[var(--success)]/30 bg-[var(--success)]/[0.07] p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--success)]">
             Resolution
           </p>
-          <p className="mt-1 text-sm">{c.resolution.note}</p>
-        </div>
+          <p className="mt-1 text-[14px] leading-relaxed">{c.resolution.note}</p>
+        </Card>
       )}
 
       {canRate && (
-        <div className="rounded-[var(--radius-app)] border p-4">
-          <p className="text-sm font-medium">How was this handled?</p>
+        <Card className="p-4">
+          <p className="text-[15px] font-semibold">How was this handled?</p>
           {feedback.isSuccess ? (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-[13.5px] text-muted-foreground">
               Thanks for your feedback.
             </p>
           ) : (
@@ -85,23 +106,24 @@ export function ComplaintDetail({ id }: { id: string }) {
                   <button
                     key={n}
                     type="button"
-                    aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                    aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
+                    aria-pressed={n <= rating}
                     onClick={() => setRating(n)}
                     className={
                       "text-2xl leading-none " +
-                      (n <= rating ? "text-[color:#f59e0b]" : "text-border")
+                      (n <= rating ? "text-[color:var(--warning)]" : "text-border")
                     }
                   >
                     ★
                   </button>
                 ))}
               </div>
-              <textarea
+              <Textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 rows={3}
                 placeholder="Anything else? (optional)"
-                className="mt-3 w-full rounded-[var(--radius-app)] border bg-card p-3 text-sm"
+                className="mt-3"
               />
               {feedback.isError && (
                 <Alert tone="error" className="mt-2">
@@ -124,7 +146,7 @@ export function ComplaintDetail({ id }: { id: string }) {
               </Button>
             </>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

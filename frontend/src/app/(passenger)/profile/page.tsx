@@ -7,6 +7,7 @@ import { PageHeader, Button, Card } from "@/components/ui";
 import { useSession, useLogout } from "@/modules/auth/hooks/useAuth";
 import { PreferencesForm } from "@/modules/passenger/components/PreferencesForm";
 import { SavedLocationList } from "@/modules/passenger/components/SavedLocationList";
+import { LocaleSwitcher } from "@/components/i18n/LocaleSwitcher";
 
 function MenuRow({
   href,
@@ -148,6 +149,8 @@ export default function ProfilePage() {
             />
           )}
         </Card>
+
+        <LocaleSwitcher />
 
         {!isGuest && (
           <>

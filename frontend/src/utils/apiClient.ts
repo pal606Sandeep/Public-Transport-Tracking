@@ -12,6 +12,20 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   skipAuthRetry?: boolean;
   /** Explicit bearer override. `undefined` = use the in-memory token; `null` = send none. */
   token?: string | null;
+  /**
+   * If the device is offline (or the request never reaches the network), stash
+   * it in the durable outbox and resolve with `{ queued: true }` instead of
+   * throwing. Only for safe-to-retry writes (POST/PATCH). See `lib/offline`.
+   */
+  queueOffline?: boolean;
+  /** Short label shown in the "pending sync" UI, e.g. "Complaint". */
+  queueLabel?: string;
+}
+
+/** Resolved value when a write was parked in the offline outbox. */
+export class QueuedResponse {
+  readonly queued = true as const;
+  constructor(public readonly label: string) {}
 }
 
 const uuid = (): string =>
@@ -80,10 +94,44 @@ export async function apiClient<T = unknown>(
   path: string,
   options: RequestOptions = {}
 ): Promise<ApiResponse<T>> {
-  const { body, idempotent, skipAuthRetry, token, headers, ...rest } = options;
+  const {
+    body,
+    idempotent,
+    skipAuthRetry,
+    token,
+    headers,
+    queueOffline,
+    queueLabel,
+    ...rest
+  } = options;
+
+  const url = `${API_BASE_URL}${path}`;
+
+  const parkOffline = async (): Promise<ApiResponse<T>> => {
+    const { enqueue } = await import("@/lib/offline/outbox");
+    await enqueue({
+      url,
+      method: (rest.method as string) ?? "POST",
+      headers: headers as Record<string, string> | undefined,
+      body,
+      label: queueLabel ?? "Change",
+    });
+    return new QueuedResponse(
+      queueLabel ?? "Change"
+    ) as unknown as ApiResponse<T>;
+  };
+
+  // Fast path: already known to be offline — don't even try the socket.
+  if (
+    queueOffline &&
+    typeof navigator !== "undefined" &&
+    navigator.onLine === false
+  ) {
+    return parkOffline();
+  }
 
   const doFetch = (bearer: string | null): Promise<Response> =>
-    fetch(`${API_BASE_URL}${path}`, {
+    fetch(url, {
       ...rest,
       credentials: "include",
       headers: {
@@ -97,7 +145,14 @@ export async function apiClient<T = unknown>(
     });
 
   const bearer = token !== undefined ? token : getAccessToken();
-  let res = await doFetch(bearer);
+  let res: Response;
+  try {
+    res = await doFetch(bearer);
+  } catch (networkError) {
+    // The request never left the device (offline, DNS, CORS-preflight failure).
+    if (queueOffline) return parkOffline();
+    throw networkError;
+  }
 
   if (res.status === 401 && !skipAuthRetry && token === undefined) {
     const fresh = await refreshAccessToken();

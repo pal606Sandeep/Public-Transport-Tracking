@@ -1,11 +1,8 @@
 "use client";
 
-import { FullScreenLoader, Alert } from "@/components/ui";
+import { FullScreenLoader, Alert, Card, Button } from "@/components/ui";
 import { errorMessage } from "@/lib/error/apiError";
-import {
-  useNotificationPrefs,
-  useUpdatePrefs,
-} from "../hooks/useNotifications";
+import { useNotificationPrefs, useUpdatePrefs } from "../hooks/useNotifications";
 import { useWebPush } from "../hooks/useWebPush";
 
 type ChannelKey = "inApp" | "webpush" | "sms" | "email";
@@ -16,6 +13,14 @@ const CHANNEL_LABELS: Record<ChannelKey, string> = {
   sms: "SMS",
   email: "Email",
 };
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <h3 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h3>
+  );
+}
 
 export function NotificationPrefsForm() {
   const { data: prefs, isLoading, error } = useNotificationPrefs();
@@ -46,104 +51,98 @@ export function NotificationPrefsForm() {
         <Alert tone="error">{errorMessage(update.error)}</Alert>
       )}
 
-      <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Channels
-        </h3>
-        {(Object.keys(CHANNEL_LABELS) as ChannelKey[]).map((k) => (
-          <label
-            key={k}
-            className="flex items-center justify-between rounded-[var(--radius-app)] border px-3 py-3 text-sm"
-          >
-            <span>{CHANNEL_LABELS[k]}</span>
-            <input
-              type="checkbox"
-              className="h-4 w-4 accent-[var(--primary)]"
-              checked={prefs.channels[k]}
-              onChange={(e) => setChannel(k, e.target.checked)}
-            />
-          </label>
-        ))}
+      <section>
+        <SectionLabel>Channels</SectionLabel>
+        <Card className="divide-y overflow-hidden">
+          {(Object.keys(CHANNEL_LABELS) as ChannelKey[]).map((k) => (
+            <label
+              key={k}
+              className="flex items-center justify-between px-4 py-3.5 text-[15px]"
+            >
+              <span>{CHANNEL_LABELS[k]}</span>
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-[var(--accent)]"
+                checked={prefs.channels[k]}
+                onChange={(e) => setChannel(k, e.target.checked)}
+              />
+            </label>
+          ))}
+        </Card>
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Browser push
-        </h3>
+      <section>
+        <SectionLabel>Browser push</SectionLabel>
         {!push.capable ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13.5px] text-muted-foreground">
             This browser doesn&apos;t support push notifications.
           </p>
         ) : !push.hasVapidKey ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13.5px] text-muted-foreground">
             Push isn&apos;t configured on the server yet.
           </p>
         ) : (
-          <>
-            <button
-              type="button"
-              disabled={push.busy}
+          <div className="flex flex-col gap-2">
+            <Button
+              variant={push.subscribed ? "secondary" : "primary"}
+              size="lg"
+              fullWidth
+              loading={push.busy}
               onClick={() =>
                 push.subscribed ? push.unsubscribe() : push.subscribe()
               }
-              className={
-                "rounded-[var(--radius-app)] px-4 py-2.5 text-sm font-medium " +
-                (push.subscribed
-                  ? "bg-muted text-foreground"
-                  : "bg-primary text-primary-foreground")
-              }
             >
-              {push.busy
-                ? "Working…"
-                : push.subscribed
-                  ? "Turn off push on this device"
-                  : "Enable push on this device"}
-            </button>
+              {push.subscribed
+                ? "Turn off push on this device"
+                : "Enable push on this device"}
+            </Button>
             {push.permission === "denied" && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[12.5px] text-muted-foreground">
                 Notifications are blocked in your browser settings.
               </p>
             )}
             {push.error && (
-              <p className="text-xs text-destructive">{push.error}</p>
+              <p className="text-[12.5px] text-destructive">{push.error}</p>
             )}
-          </>
+          </div>
         )}
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Quiet hours
-        </h3>
-        <div className="flex items-center gap-2">
+      <section>
+        <SectionLabel>Quiet hours</SectionLabel>
+        <Card className="flex items-center gap-2 p-3">
           <input
             type="time"
+            aria-label="Quiet hours start"
             value={prefs.quietHours.start ?? ""}
             onChange={(e) => setQuiet("start", e.target.value)}
-            className="h-11 flex-1 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
+            className="h-11 flex-1 rounded-[var(--radius-app-sm)] border bg-background px-3 text-[14px]"
           />
-          <span className="text-sm text-muted-foreground">to</span>
+          <span className="text-[13.5px] text-muted-foreground">to</span>
           <input
             type="time"
+            aria-label="Quiet hours end"
             value={prefs.quietHours.end ?? ""}
             onChange={(e) => setQuiet("end", e.target.value)}
-            className="h-11 flex-1 rounded-[var(--radius-app)] border bg-card px-3 text-sm"
+            className="h-11 flex-1 rounded-[var(--radius-app-sm)] border bg-background px-3 text-[14px]"
           />
-        </div>
-        <p className="text-xs text-muted-foreground">
+        </Card>
+        <p className="mt-1.5 px-1 text-[12.5px] text-muted-foreground">
           Non-urgent notifications are held until quiet hours end.
         </p>
       </section>
 
-      <label className="flex items-center justify-between rounded-[var(--radius-app)] border px-3 py-3 text-sm">
-        <span>Daily digest instead of individual alerts</span>
-        <input
-          type="checkbox"
-          className="h-4 w-4 accent-[var(--primary)]"
-          checked={prefs.digest}
-          onChange={(e) => update.mutate({ digest: e.target.checked })}
-        />
-      </label>
+      <Card className="overflow-hidden">
+        <label className="flex items-center justify-between px-4 py-3.5 text-[15px]">
+          <span>Daily digest instead of individual alerts</span>
+          <input
+            type="checkbox"
+            className="h-5 w-5 accent-[var(--accent)]"
+            checked={prefs.digest}
+            onChange={(e) => update.mutate({ digest: e.target.checked })}
+          />
+        </label>
+      </Card>
     </div>
   );
 }
