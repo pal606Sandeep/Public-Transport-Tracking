@@ -23,18 +23,25 @@ const clientMeta = (req: Request) => ({
   deviceId: (req.body?.deviceId as string) || undefined,
 });
 
+// In production the API (Render) and the web apps (Vercel) are on different
+// sites, so the refresh cookie must be SameSite=None (which requires Secure).
+const isProd = process.env.NODE_ENV === "production";
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? ("none" as const) : ("strict" as const),
+  path: "/api/v1/auth",
+};
+
 export function setRefreshCookie(res: Response, refresh: string): void {
   res.cookie(REFRESH_COOKIE, refresh, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    path: "/api/v1/auth",
+    ...refreshCookieOptions,
     maxAge: Number(process.env.REFRESH_EXPIRES_DAYS || 30) * 24 * 60 * 60 * 1000,
   });
 }
 
 function clearRefreshCookie(res: Response): void {
-  res.clearCookie(REFRESH_COOKIE, { path: "/api/v1/auth" });
+  res.clearCookie(REFRESH_COOKIE, refreshCookieOptions);
 }
 
 /* ----------------- P1-07 register / login ---------------------------- */

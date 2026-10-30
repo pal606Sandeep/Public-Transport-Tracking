@@ -56,6 +56,10 @@ dotenv.config();
 
 const app: Express = express();
 
+// Behind Render's load balancer: use X-Forwarded-For for req.ip so per-IP
+// rate limits and OTP limits see the real client, not the proxy.
+app.set("trust proxy", 1);
+
 app.use(helmet());
 app.use(traceIdMiddleware);
 app.use(httpMetricsMiddleware);
