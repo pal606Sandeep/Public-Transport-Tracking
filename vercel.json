@@ -5,10 +5,6 @@
       "root": "admin",
       "framework": "nextjs"
     },
-    "backend": {
-      "root": "backend",
-      "framework": "express"
-    },
     "frontend": {
       "root": "frontend",
       "framework": "nextjs"
@@ -16,15 +12,15 @@
   },
   "rewrites": [
     {
-      "source": "/admin/(.*)",
+      "source": "/admin",
       "destination": {
         "service": "admin"
       }
     },
     {
-      "source": "/api/(.*)",
+      "source": "/admin/(.*)",
       "destination": {
-        "service": "backend"
+        "service": "admin"
       }
     },
     {
