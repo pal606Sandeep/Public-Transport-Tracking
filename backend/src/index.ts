@@ -21,6 +21,17 @@ const startServer = async (): Promise<void> => {
   try {
     await connectDB();
 
+    const httpServer = http.createServer(app);
+
+    const io = initSocket(httpServer);
+    registerSocketHandlers(io);
+
+    // Bind the port before the (slow) tracking-state rebuild so the host's
+    // port scan / health check sees the service as up right away.
+    httpServer.listen(Number(PORT), "0.0.0.0", () => {
+      logger.info(`Server running on port ${PORT}`);
+    });
+
     await rebuildTrackingState().catch((err: Error) => {
       logger.error(`Tracking state rebuild failed: ${err.message}`);
     });
@@ -30,15 +41,6 @@ const startServer = async (): Promise<void> => {
     startOccupancyConsumer();
     startMaintenanceJobRunner();
     startIncidentConsumer();
-
-    const httpServer = http.createServer(app);
-
-    const io = initSocket(httpServer);
-    registerSocketHandlers(io);
-
-    httpServer.listen(PORT, () => {
-      logger.info(`Server running on port ${PORT}`);
-    });
 
     process.on("SIGINT", async () => {
       await redisClient.quit();
