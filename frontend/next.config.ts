@@ -6,7 +6,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 // When set (e.g. https://my-api.onrender.com), /api/v1/* is proxied to the
 // backend so the browser sees one origin and the refresh cookie is first-party
 // (cross-site cookies are blocked by Safari and by Chrome's 3rd-party policy).
-const BACKEND_URL = process.env.BACKEND_URL?.replace(/\/+$/, "");
+const BACKEND_URL = process.env.BACKEND_URL?.trim().replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   async rewrites() {
