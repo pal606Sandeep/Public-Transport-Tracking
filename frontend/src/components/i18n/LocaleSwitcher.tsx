@@ -1,5 +1,7 @@
 "use client";
 
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { LOCALES, LOCALE_LABEL } from "@/i18n/config";
 import { persistLocale } from "@/i18n/persistLocale";
@@ -7,14 +9,19 @@ import { persistLocale } from "@/i18n/persistLocale";
 /**
  * Segmented language picker. Locale lives in a long-lived cookie that
  * `src/i18n/request.ts` reads on the server, so switching means "set cookie +
- * reload" — no client-side message swapping to keep in sync.
+ * router.refresh()" — server components re-render with the new messages while
+ * client state (including the in-memory session) is kept, unlike a reload.
  */
 export function LocaleSwitcher() {
   const active = useLocale();
   const t = useTranslations("profile");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
 
   const choose = (loc: string) => {
-    if (loc !== active) persistLocale(loc);
+    if (loc === active || pending) return;
+    persistLocale(loc);
+    startTransition(() => router.refresh());
   };
 
   return (
